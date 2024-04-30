@@ -7,10 +7,10 @@
                     ""LocationId"": ""999"",
                     ""Position"": ""(0.0, 0.0, 0.0)"",
                     ""RequiredItems"": [
-                        {""Hyperdash"": 1, ""Sword"": 1}
+                        {""Hyperdash"": 1, ""Sword"": 1, ""Techbow"": 1}
                     ],
                     ""RequiredItemsDoors"": [
-                        {""Cathedral Gauntlet"": 1, ""Sword"": 1}
+                        {""Cathedral Gauntlet"": 1, ""Sword"": 1, ""Techbow"": 1}
                     ],
                     ""SceneId"": 61,
                     ""SceneName"": ""Cathedral Arena""
@@ -25,7 +25,9 @@
                 ""Location"": {
                     ""LocationId"": ""Lantern"",
                     ""Position"": ""(-135.2, 34.1, -43.2)"",
-                    ""RequiredItems"": [],
+                    ""RequiredItems"": [
+                        {""Stick"": 1}
+                    ],
                     ""RequiredItemsDoors"": [
                         {""Furnace Fuse"": 1}
                     ],
@@ -1530,7 +1532,7 @@
                     ""Position"": ""(-161.0, 1.0, -72.0)"",
                     ""RequiredItems"": [],
                     ""RequiredItemsDoors"": [
-                    {""Overworld Redux"": 1}
+                        {""Overworld"": 1}
                     ],
                     ""SceneId"": 25,
                     ""SceneName"": ""Overworld Redux""
@@ -1884,7 +1886,7 @@
                     ""Position"": ""(-40.3, 1.0, -40.3)"",
                     ""RequiredItems"": [],
                     ""RequiredItemsDoors"": [
-                    {""Atoll Redux"": 1}
+                        {""Ruined Atoll"": 1}
                     ],
                     ""SceneId"": 32,
                     ""SceneName"": ""Atoll Redux""
@@ -2677,7 +2679,7 @@
                         {""Stick"": 1}
                     ],
                     ""RequiredItemsDoors"": [
-                        {""Beneath the Well Main, Sewer_Boss_"": 1}
+                        {""Beneath the Well Back"": 1}
                     ],
                     ""SceneId"": 27,
                     ""SceneName"": ""Sewer""
