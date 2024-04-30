@@ -189,6 +189,7 @@
     <Compile Include="src\Patches\GhostHints.cs" />
     <Compile Include="src\Patches\InteractionPatches.cs" />
     <Compile Include="src\Patches\ItemPresentationPatches.cs" />
+    <Compile Include="src\Patches\AlternateItemRandomizer.cs" />
     <Compile Include="src\Patches\ItemRandomizer.cs" />
     <Compile Include="src\Patches\QuickSettings.cs" />
     <Compile Include="src\Patches\FairyTargets.cs" />

@@ -67,10 +67,16 @@ namespace TunicRandomizer {
                 OptionsGUI.addToggle("Lanternless Logic", "Off", "On", TunicRandomizer.Settings.Lanternless ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleLanternless);
                 OptionsGUI.addToggle("Maskless Logic", "Off", "On", TunicRandomizer.Settings.Maskless ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleMaskless);
                 OptionsGUI.addToggle("Mystery Seed", "Off", "On", TunicRandomizer.Settings.MysterySeed ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleMysterySeed);
+                OptionsGUI.addToggle("Alternate Logic", "Off", "On", TunicRandomizer.Settings.AlternateLogic ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleAlternateLogic);
 
             } else {
                 if (SaveFile.GetInt("randomizer mystery seed") == 1) {
                     OptionsGUI.addButton("Mystery Seed", "<#00ff00>On", null);
+                    return;
+                }
+                if (SaveFile.GetInt("randomizer alternate logic") == 1)
+                {
+                    OptionsGUI.addButton("Alternate Logic", "<#00ff00>On", null);
                     return;
                 }
                 OptionsGUI.addButton("Game Mode", SaveFile.GetString("randomizer game mode"), null);
@@ -245,6 +251,12 @@ namespace TunicRandomizer {
 
         public static void ToggleMysterySeed(int index) {
             TunicRandomizer.Settings.MysterySeed = !TunicRandomizer.Settings.MysterySeed;
+            SaveSettings();
+        }
+
+        public static void ToggleAlternateLogic(int index)
+        {
+            TunicRandomizer.Settings.AlternateLogic = !TunicRandomizer.Settings.MysterySeed;
             SaveSettings();
         }
 

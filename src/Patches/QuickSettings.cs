@@ -32,7 +32,7 @@ namespace TunicRandomizer {
                 Cursor.visible = true;
                 switch (TunicRandomizer.Settings.Mode) {
                     case RandomizerSettings.RandomizerType.SINGLEPLAYER:
-                        GUI.Window(101, new Rect(20f, 150f, 430f, TunicRandomizer.Settings.MysterySeed ? 430f : 510f), new Action<int>(SinglePlayerQuickSettingsWindow), "Single Player Settings");
+                        GUI.Window(101, new Rect(20f, 150f, 430f, TunicRandomizer.Settings.MysterySeed ? 470f : 550f), new Action<int>(SinglePlayerQuickSettingsWindow), "Single Player Settings");
                         ShowAPSettingsWindow = false;
                         editingPlayer = false;
                         editingHostname = false;
@@ -292,6 +292,9 @@ namespace TunicRandomizer {
                 y += 40f;
                 TunicRandomizer.Settings.EntranceRandoEnabled = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.EntranceRandoEnabled, "Entrance Randomizer");
                 TunicRandomizer.Settings.StartWithSwordEnabled = GUI.Toggle(new Rect(240f, y, 175f, 30f), TunicRandomizer.Settings.StartWithSwordEnabled, "Start With Sword");
+                
+                y += 40f;
+                TunicRandomizer.Settings.AlternateLogic = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.AlternateLogic, "Alt. Randomization");
 
                 y += 40f;
                 GUI.skin.button.fontSize = 20;

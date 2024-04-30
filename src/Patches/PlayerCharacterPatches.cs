@@ -75,7 +75,9 @@ namespace TunicRandomizer {
                     $"\"Sword Progression....{(SaveFile.GetInt("randomizer sword progression enabled") == 0 ? "<#ff0000>Off" : "<#00ff00>On").PadLeft(21, '.')}\"\n" +
                     $"\"Started With Sword...{(SaveFile.GetInt("randomizer started with sword") == 0 ? "<#ff0000>No" : "<#00ff00>Yes").PadLeft(21, '.')}\"\n" +
                     $"\"Shuffled Abilities...{(SaveFile.GetInt("randomizer shuffled abilities") == 0 ? "<#ff0000>Off" : "<#00ff00>On").PadLeft(21, '.')}\"\n" +
-                    $"\"Entrance Randomizer..{(SaveFile.GetInt("randomizer entrance rando enabled") == 0 ? "<#ff0000>Off" : "<#00ff00>On").PadLeft(21, '.')}\"",
+                    $"\"Entrance Randomizer..{(SaveFile.GetInt("randomizer entrance rando enabled") == 0 ? "<#ff0000>Off" : "<#00ff00>On").PadLeft(21, '.')}\"" +
+                    $"\"Alternate Logic......{(SaveFile.GetInt("randomizer alternate logic") == 0 ? "<#ff0000>Off" : "<#00ff00>On").PadLeft(21, '.')}\"",
+
                     (Il2CppSystem.Action)RandomizerSettings.getSettings, null);
                 }
             }
@@ -415,6 +417,11 @@ namespace TunicRandomizer {
                     if (TunicRandomizer.Settings.ShuffleAbilities) {
                         SaveFile.SetInt("randomizer shuffled abilities", 1);
                     }
+
+                    if (TunicRandomizer.Settings.AlternateLogic)
+                    {
+                        SaveFile.SetInt("randomizer alternate logic", 1);
+                    }
                 }
 
                 foreach (string Scene in Locations.AllScenes) {
@@ -428,8 +435,16 @@ namespace TunicRandomizer {
             TunicRandomizer.Tracker = new ItemTracker();
             TunicRandomizer.Tracker.Seed = seed;
             Logger.LogInfo("Loading single player seed: " + seed);
-            ItemRandomizer.PopulateSphereZero();
-            ItemRandomizer.RandomizeAndPlaceItems();
+            if (TunicRandomizer.Settings.AlternateLogic)
+            {
+                AlternateItemRandomizer.PopulateSphereZero();
+                AlternateItemRandomizer.RandomizeAndPlaceItems();
+            } else
+            {
+                ItemRandomizer.PopulateSphereZero();
+                ItemRandomizer.RandomizeAndPlaceItems();
+            }
+            
         }
 
         private static void PlayerCharacter_Start_ArchipelagoSetup() {
@@ -616,6 +631,10 @@ namespace TunicRandomizer {
             }
             if (random.Next(2) == 1) {
                 SaveFile.SetInt("randomizer shuffled abilities", 1);
+            }
+            if (random.Next(2) == 1)
+            {
+                SaveFile.SetInt("randomizer alternate logic", 1);
             }
         }
 
