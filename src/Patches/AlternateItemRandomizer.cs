@@ -389,6 +389,7 @@ namespace TunicRandomizer {
                     if (
                         (inventory.ContainsKey("Hexagon Red") && inventory.ContainsKey("Hexagon Green") && inventory.ContainsKey("Hexagon Blue"))
                         && (inventory.ContainsKey("Hyperdash") || inventory.ContainsKey("Lantern"))
+                        && inventory.ContainsKey("12")
                     )
                     {
                         winConditionMet = true;
