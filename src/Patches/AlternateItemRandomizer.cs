@@ -174,7 +174,9 @@ namespace TunicRandomizer {
                 }
             }
 
-            TunicPortals.RandomizePortals(SaveFile.GetInt("seed"));
+            //seeding for the portal gen ensures we get a deterministic result, still allowing re-shuffles to get new room arrangements
+            int portalSeed = random.Next(int.MaxValue);
+            TunicPortals.RandomizePortals(portalSeed);
 
             // shuffle most rewards and locations
             Shuffle(InitialRewards, InitialLocations, random);
@@ -273,6 +275,7 @@ namespace TunicRandomizer {
             int loopCount = 0;
             int newLocationsThisLoop = 1;
             bool winConditionMet = false;
+            Portal heirPortal = null;
 
             Dictionary<string, Check> RandomizedLocations = Locations.RandomizedLocations;
             Dictionary<string, int> inventory = new Dictionary<string, int>();
@@ -289,59 +292,67 @@ namespace TunicRandomizer {
                 }
             }
 
+            //get sphere one (locations) as well as heir portal location directly if in ER
             if (SaveFile.GetInt("randomizer entrance rando enabled") == 1)
             {
-                Logger.LogInfo("[Passcheck] Loading items for sphere zero for entrance rando");
-                List<string> sphere_zero_list = GetERSphereOne();
+                Logger.LogInfo("[Passcheck] Loading items for sphere one for entrance rando");
+                List<string> sphere_one_list = GetERSphereOne();
                 inventory.Clear();
-                foreach (string sphere_zero_item in sphere_zero_list)
+                foreach (string sphere_one_item in sphere_one_list)
                 {
-                    if (!inventory.ContainsKey(sphere_zero_item))
+                    if (!inventory.ContainsKey(sphere_one_item))
                     {
-                        inventory.Add(sphere_zero_item, 1);
+                        inventory.Add(sphere_one_item, 1);
                     }
+                }
+
+                foreach (PortalCombo portalCombo in TunicPortals.RandomizedPortals.Values)
+                {
+                    if (portalCombo.Portal1.Scene == "Spirit Arena")
+                    {
+                        heirPortal = portalCombo.Portal2;
+                        break;
+                    }
+                    if (portalCombo.Portal2.Scene == "Spirit Arena")
+                    {
+                        heirPortal = portalCombo.Portal1;
+                        break;
+                    }
+                }
+                if(heirPortal != null)
+                {
+                    Logger.LogInfo($"[Passcheck] Heir portal found at {heirPortal.Name} in {heirPortal.Region}");
                 }
             }
 
-            Logger.LogInfo("[Passcheck] Sphere Zero Filled");
+            Logger.LogInfo("[Passcheck] Starting Inventory Filled");
 
             while (newLocationsThisLoop > 0 && winConditionMet == false)
             {
                 loopCount++;
                 newLocationsThisLoop = 0;
-                
 
                 Logger.LogInfo("[Passcheck] Beginning Loop " + loopCount.ToString());
 
-                //Update reachable regions in the inventory before we loop again
-                if (SaveFile.GetInt("randomizer entrance rando enabled") == 1)
-                {
-                    Logger.LogInfo("[Passcheck] Updating reachable regions for entrance rando");
-                    inventory = TunicPortals.UpdateReachableRegions(inventory);
-                }
-
                 foreach (string Key in RandomizedLocations.Keys)
                 {
-                    string locId = RandomizedLocations[Key].Location.LocationId;
+                    
+                    Reward currentReward = RandomizedLocations[Key].Reward;
+                    Location currentLocation = RandomizedLocations[Key].Location;
+                    string locId = currentLocation.LocationId;
 
-                    if (!checkedLocations.Contains(locId) && RandomizedLocations[Key].Location.reachable(inventory))
+                    if (!checkedLocations.Contains(currentLocation.LocationId) && currentLocation.reachable(inventory))
                     {
 
-                        Logger.LogInfo("[Passcheck] Obtained: " + RandomizedLocations[Key].Reward.Name + " @ " + RandomizedLocations[Key].Location.SceneName  + RandomizedLocations[Key].Location.Position);
+                        Logger.LogInfo("[Passcheck] Obtained: " + currentReward.Name + " @ " + currentLocation.SceneName  + currentLocation.Position);
+                        if (!inventory.ContainsKey(currentLocation.SceneName)) inventory.Add(currentLocation.SceneName, 1);
 
                         checkedLocations.Add(locId);
                         newLocationsThisLoop++;
 
-                        string itemName = ItemLookup.FairyLookup.Keys.Contains(RandomizedLocations[Key].Reward.Name) ? "Fairy" : RandomizedLocations[Key].Reward.Name;
-                        if (inventory.ContainsKey(itemName))
-                        {
-                            inventory[itemName] += RandomizedLocations[Key].Reward.Amount;
-                        }
-                        else
-                        {
-                            inventory.Add(itemName, RandomizedLocations[Key].Reward.Amount);
-                        }
-
+                        string itemName = ItemLookup.FairyLookup.Keys.Contains(currentReward.Name) ? "Fairy" : currentReward.Name;
+                        addToInventory(inventory, itemName, currentReward.Amount);
+                        
                         //if questagon hunt, check if we've hit a questagon milestone and add the right progression item
                         if (SaveFile.GetInt(SaveFlags.HexagonQuestEnabled) == 1 && inventory.ContainsKey("Hexagon Gold"))
                         {
@@ -366,38 +377,28 @@ namespace TunicRandomizer {
                                 Logger.LogInfo("[Passcheck] Got enough Questagons for Icebolt");
                                 newLocationsThisLoop++;
                             }
-
                         }
 
 
                     }
                 }
 
-                //check for win condition
-                if (SaveFile.GetInt(SaveFlags.HexagonQuestEnabled) == 1)
+                //Update reachable regions in the inventory before we loop again
+                if (SaveFile.GetInt("randomizer entrance rando enabled") == 1)
                 {
-                    Logger.LogInfo("[Passcheck] Checking for questagon mode win condition");
-                    if (inventory.ContainsKey("Hexagon Gold") && inventory["Hexagon Gold"] >= SaveFile.GetInt("randomizer hexagon quest goal"))
-                    {
-                        winConditionMet = true;
-                        Logger.LogInfo("[Passcheck] Questagon Hunt win condition found!");
-                    }
-                }
-                else
-                {
-                    Logger.LogInfo("[Passcheck] Checking for standard mode win condition");
-                    if (
-                        (inventory.ContainsKey("Hexagon Red") && inventory.ContainsKey("Hexagon Green") && inventory.ContainsKey("Hexagon Blue"))
-                        && (inventory.ContainsKey("Hyperdash") || inventory.ContainsKey("Lantern"))
-                        && inventory.ContainsKey("12")
-                    )
-                    {
-                        winConditionMet = true;
-                        Logger.LogInfo("[Passcheck] Standard Logic win condition found!");
-                    }
+                    Logger.LogInfo("[Passcheck] Updating reachable regions for entrance rando");
+                    inventory = TunicPortals.UpdateReachableRegions(inventory);
                 }
 
-                
+                //check for win condition
+                if(checkedLocations.Count == RandomizedLocations.Count)
+                {
+                    winConditionMet = true; //we can reach every check!
+                } else
+                {
+                    winConditionMet = checkWinCondition(inventory, heirPortal);
+                }
+
                 Logger.LogInfo($"[Passcheck] Ending loop {loopCount}, found {newLocationsThisLoop} new checks this time around!");
             }
 
@@ -407,6 +408,97 @@ namespace TunicRandomizer {
             }
             return winConditionMet;
             
+        }
+
+        public static List<string> findPortalPathToItem(string itemName)
+        {
+            if (SaveFile.GetInt("randomizer entrance rando enabled") == 1)
+            {
+                Logger.LogInfo("Can't use findPortalPathToItem outside of ER");
+                return new List<string>();
+            }
+            return new List<string>();
+            //get a list of the currently-accessible locations.  any portals leading back to one of these completes the path
+            //find the region the desired reward is attached to
+            //for each portal pair in the region:
+            //  skip this item if the portal pairing has already been traversed
+            //  add the portal pairing to those that have already been traversed
+            //  add the requirements for this portal pairing to a list for this chain (if it doesn't already exist)
+            //  Check if the other end of the pairing leads back to one of our currently-accessible locations
+            //      If so, return the full chain of required items!
+            //      If not, call this on the region on the other end of the portal
+
+        }
+
+        public static bool checkWinCondition(Dictionary<string,int> inventory, Portal heirPortal = null)
+        {
+            Logger.LogInfo("[Passcheck] Checking for a win condition");
+            if (SaveFile.GetInt("randomizer entrance rando enabled") == 1)
+            {
+                if (heirPortal == null)
+                {
+                    Logger.LogInfo("[Passcheck] ---- ERROR Entrance rando is enabled but the heir portal can't be found! ");
+                    return false;
+
+                }
+                if (inventory.ContainsKey(heirPortal.Region))
+                {
+                    Logger.LogInfo($"[Passcheck] ---- PASS heir portal in {heirPortal.Region} region is reachable!");
+                } else
+                {
+                    Logger.LogInfo($"[Passcheck] ---- FAIL heir portal in {heirPortal.Region} region is not yet reachable!");
+                    return false;
+                }
+            } else
+            {
+                if(SaveFile.GetInt("randomizer entrance rando enabled") == 0 && inventory.ContainsKey("12"))
+                {
+                    Logger.LogInfo($"[Passcheck] ---- PASS Got prayer, the Far Shore is reachable!");
+                } else
+                {
+                    Logger.LogInfo($"[Passcheck] ---- FAIL No prayer, the Far Shore is un-reachable!");
+                    return false;
+                }
+            }
+            
+
+            if (SaveFile.GetInt(SaveFlags.HexagonQuestEnabled) == 1)
+            {
+                if(inventory.ContainsKey("Hexagon Gold") && inventory["Hexagon Gold"] >= SaveFile.GetInt("randomizer hexagon quest goal"))
+                {
+                    Logger.LogInfo("[Passcheck] ---- PASS Got enough gold questagons!");
+                    Logger.LogInfo("[Passcheck] Questagon Hunt win condition found!");
+                    return true;
+                } else
+                {
+                    Logger.LogInfo("[Passcheck] ---- FAIL Not enough gold questagons!");
+                    return false;
+                }
+            }
+            else
+            {
+                if (inventory.ContainsKey("Hexagon Red") && inventory.ContainsKey("Hexagon Green") && inventory.ContainsKey("Hexagon Blue")) //access to sealed temple to insert questagons)
+                {
+                    Logger.LogInfo("[Passcheck] ---- PASS Got all three questagons!");
+                }
+                else
+                {
+                    Logger.LogInfo("[Passcheck] ---- FAIL don't have all 3 questagons!");
+                    return false;
+                }
+
+                if((inventory.ContainsKey("Hyperdash") || inventory.ContainsKey("Lantern")))
+                {
+                    Logger.LogInfo("[Passcheck] ---- PASS Got access to Sealed Temple!");
+                    Logger.LogInfo("[Passcheck] Standard Logic win condition found!");
+                    return true;
+                } else
+                {
+                    Logger.LogInfo("[Passcheck] ---- FAIL No access to Sealed Temple!");
+                    return false;
+                }
+  
+            }
         }
 
         private static void Shuffle(List<Reward> Rewards, List<Location> Locations, System.Random random) {
@@ -514,6 +606,18 @@ namespace TunicRandomizer {
             }
             CombinedInventory = TunicPortals.FirstStepsUpdateReachableRegions(CombinedInventory);
             return CombinedInventory;
+        }
+
+        public static void addToInventory(Dictionary<string, int> inventory, string itemName, int amount = 1)
+        {
+            if (inventory.ContainsKey(itemName))
+            {
+                inventory[itemName] += amount;
+            }
+            else
+            {
+                inventory.Add(itemName, amount);
+            }
         }
     }
 }
