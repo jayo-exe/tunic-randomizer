@@ -37,7 +37,7 @@ namespace TunicRandomizer {
 
         private static void clearAllEditingFlags()
         {
-            Logger.LogInfo("clearing all flags");
+            TunicLogger.LogInfo("clearing all flags");
             editingPlayer = false;
             editingHostname = false;
             editingPort = false;
@@ -89,7 +89,7 @@ namespace TunicRandomizer {
                     GUI.Window(103, new Rect(460f, 150f, 350f, 490f), new Action<int>(ArchipelagoConfigEditorWindow), "Archipelago Config");
                 }
                 if (ShowAdvancedSinglePlayerOptions && TunicRandomizer.Settings.Mode == RandomizerSettings.RandomizerType.SINGLEPLAYER && !TunicRandomizer.Settings.MysterySeed) {
-                    GUI.Window(105, new Rect(460f, 150f, 405f, 485f), new Action<int>(AdvancedLogicOptionsWindow), "Advanced Logic Options");
+                    GUI.Window(105, new Rect(460f, 150f, 465f, 485f), new Action<int>(AdvancedLogicOptionsWindow), "Advanced Logic Options");
                 }
                 GameObject.Find("elderfox_sword graphic").GetComponent<Renderer>().enabled = !ShowAdvancedSinglePlayerOptions && !ShowAPSettingsWindow;
                 if(TitleVersion.TitleButtons != null) {
@@ -106,11 +106,9 @@ namespace TunicRandomizer {
                 if (Input.anyKeyDown && !Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.Escape) && !Input.GetKeyDown(KeyCode.Tab) && !Input.GetKeyDown(KeyCode.Backspace) && !Input.GetKeyDown(KeyCode.Delete) && !Input.GetKeyDown(KeyCode.LeftArrow) && !Input.GetKeyDown(KeyCode.RightArrow)) {
 
                     if (editingPort && Input.inputString != "" && int.TryParse(Input.inputString, out int num)) {
-                        Logger.LogInfo($"inserting {Input.inputString} at position {stringCursorPosition} in string {stringToEdit}");
                         stringToEdit = stringToEdit.Insert(stringCursorPosition, Input.inputString);
                         stringCursorPosition++;
                     } else if (!editingPort && Input.inputString != "") {
-                        Logger.LogInfo($"inserting {Input.inputString} at position {stringCursorPosition} in string {stringToEdit}");
                         stringToEdit = stringToEdit.Insert(stringCursorPosition, Input.inputString);
                         stringCursorPosition++;
                     }
@@ -515,7 +513,9 @@ namespace TunicRandomizer {
             GUI.Label(new Rect(190f, y, 30f, 30f), $"<size=18>{((int)Math.Round((100f + TunicRandomizer.Settings.HexagonQuestExtraPercentage) / 100f * TunicRandomizer.Settings.HexagonQuestGoal))}</size>");
             TunicRandomizer.Settings.HexagonQuestExtraPercentage = (int)GUI.HorizontalSlider(new Rect(220f, y + 15, 175f, 30f), TunicRandomizer.Settings.HexagonQuestExtraPercentage, 0, 100);
             y += 30f;
-            TunicRandomizer.Settings.AlternateLogic = GUI.Toggle(new Rect(10f, y, 300f, 30f), TunicRandomizer.Settings.AlternateLogic, "Use Alternate Randomization Logic");
+            TunicRandomizer.Settings.AlternateLogic = GUI.Toggle(new Rect(10f, y, 400f, 30f), TunicRandomizer.Settings.AlternateLogic, "Use Alternate Randomization Logic");
+            y += 20f;
+            GUI.Label(new Rect(10f, y, 400f, 30f), $"<color=#ff0000>Does not work with ER or Ladder Shuffle</color>");
             y += 40f;
             GUI.Label(new Rect(10f, y, 300f, 30f), $"Entrance Randomizer");
             y += 40f;

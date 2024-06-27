@@ -683,7 +683,9 @@ namespace TunicRandomizer {
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
                 FoolMessageTop = $"[fooltrap] \"!!\"<#FF00FF>lfoo \"A ERA UOY\"";
                 FoolMessageBottom = $"tAk uh mOmint too ruhflehkt.";
+                VNyanSender.SendActionToVNyan("TunicMirrorMode", new { status = "true" });
                 CameraController.Flip = true;
+                PlayerCharacterPatches.MirrorMode = true;
                 PlayerCharacter.instance.Flinch(true);
             } else if (FoolType >= 5 && FoolType < 15) {
                 // Tiny fox trap
@@ -691,6 +693,7 @@ namespace TunicRandomizer {
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
                 FoolMessageTop = $"yoo R A <#FFA500>tInE \"<#FFA500>FOOL<#ffffff>!!\" [fooltrap]";
                 FoolMessageBottom = $"hahf #uh sIz, duhbuhl #uh kyoot.";
+                VNyanSender.SendActionToVNyan("TunicTinyFox", new { status = "true" });
                 PlayerCharacterPatches.TinierFox = true;
                 PlayerCharacter.instance.Flinch(true);
             } else if (FoolType >= 15 && FoolType < 40) {

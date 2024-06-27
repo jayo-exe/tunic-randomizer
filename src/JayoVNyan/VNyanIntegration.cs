@@ -25,7 +25,6 @@ namespace JayoVNyan
 {
     class VNyanIntegration
     {
-        private static ManualLogSource Logger = TunicRandomizer.TunicRandomizer.Logger;
         private static VNyanIntegration instance;
 
         public static bool initialized = false;
@@ -44,10 +43,10 @@ namespace JayoVNyan
         {
             if(!initialized)
             {
-                VNyanSender.LogInfo += (msg) => { Logger.LogInfo(msg); };
-                VNyanSender.OnWebsocketOpen += () => { Logger.LogInfo($"VNyan Socket Connected"); connected = true; };
-                VNyanSender.OnWebsocketClose += (reason) => { Logger.LogInfo($"VNyan Socket Disconnected: {reason}"); connected = false; };
-                VNyanSender.OnWebsocketError += (message) => { Logger.LogInfo($"VNyan Socket Error: {message}"); };
+                VNyanSender.LogInfo += (msg) => { TunicLogger.LogInfo(msg); };
+                VNyanSender.OnWebsocketOpen += () => { TunicLogger.LogInfo($"VNyan Socket Connected"); connected = true; };
+                VNyanSender.OnWebsocketClose += (reason) => { TunicLogger.LogInfo($"VNyan Socket Disconnected: {reason}"); connected = false; };
+                VNyanSender.OnWebsocketError += (message) => { TunicLogger.LogInfo($"VNyan Socket Error: {message}"); };
                 initialized = true;
             }
             

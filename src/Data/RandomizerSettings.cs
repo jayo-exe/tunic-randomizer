@@ -621,7 +621,7 @@ namespace TunicRandomizer {
                     SaveFile.GetInt(SaveFlags.AbilityShuffle) == 1, SaveFile.GetInt(SaveFlags.EntranceRando) == 1,
                     SaveFile.GetInt("randomizer ER fixed shop") == 1, SaveFile.GetInt(SaveFlags.LanternlessLogic) == 1,
                     SaveFile.GetInt(SaveFlags.MasklessLogic) == 1, SaveFile.GetInt("randomizer mystery seed") == 1, 
-                    SaveFile.GetInt(SaveFlags.LadderRandoEnabled) == 1
+                    SaveFile.GetInt(SaveFlags.LadderRandoEnabled) == 1,
                     SaveFile.GetInt("randomizer alternate logic") == 1
                 };
             }

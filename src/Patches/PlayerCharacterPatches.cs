@@ -24,6 +24,7 @@ namespace TunicRandomizer {
         public static int HeirAssistModeDamageValue = 0;
         public static bool StungByBee = false;
         public static bool TinierFox = false;
+        public static bool MirrorMode = false;
         public static bool IsTeleporting = false;
         public static bool DiedToDeathLink = false;
         public static string DeathLinkMessage = "";
@@ -518,10 +519,10 @@ namespace TunicRandomizer {
             }
             TunicRandomizer.Tracker = new ItemTracker();
             TunicRandomizer.Tracker.Seed = seed;
-            Logger.LogInfo("Loading single player seed: " + seed);
-            if (TunicRandomizer.Settings.GameMode == RandomizerSettings.GameModes.HEXAGONQUEST && TunicRandomizer.Settings.AlternateLogic)
+            TunicLogger.LogInfo("Loading single player seed: " + seed);
+            if (TunicRandomizer.Settings.GameMode == RandomizerSettings.GameModes.HEXAGONQUEST && TunicRandomizer.Settings.AlternateLogic && !TunicRandomizer.Settings.ShuffleLadders && !TunicRandomizer.Settings.EntranceRandoEnabled)
             {
-                AlternateItemRandomizer.PopulateSphereZero();
+                AlternateItemRandomizer.PopulatePrecollected();
                 AlternateItemRandomizer.RandomizeAndPlaceItems();
             } else
             {

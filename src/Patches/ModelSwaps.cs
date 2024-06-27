@@ -1,5 +1,6 @@
 ﻿using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
+using Archipelago.MultiClient;
 using BepInEx.Logging;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ namespace TunicRandomizer {
         public static GameObject HexagonGoldImage;
         public static GameObject TuncTitleImage;
         public static GameObject TuncImage;
-
+ 
         public static GameObject FairyAnimation;
         public static GameObject IceFlask;
 

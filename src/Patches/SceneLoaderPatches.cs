@@ -58,6 +58,7 @@ namespace TunicRandomizer {
             SpawnedGhosts = false;
 
             CameraController.Flip = TunicRandomizer.Settings.CameraFlip;
+            
 
             if (loadingScene.name == "Posterity" && !EnemyRandomizer.Enemies.ContainsKey("Phage")) {
                 EnemyRandomizer.InitializeEnemies("Posterity");
@@ -263,6 +264,11 @@ namespace TunicRandomizer {
                 VNyanSender.SendActionToVNyan("TunicTinyFox", new { status = "false" });
             }
             PlayerCharacterPatches.TinierFox = false;
+            if(PlayerCharacterPatches.MirrorMode)
+            {
+                VNyanSender.SendActionToVNyan("TunicMirrorMode", new { status = "false" });
+            }
+            PlayerCharacterPatches.MirrorMode = false;
 
             // Fur, Puff, Details, Tunic, Scarf
             if (TunicRandomizer.Settings.RandomFoxColorsEnabled) {
