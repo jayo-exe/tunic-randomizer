@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -33,7 +34,8 @@ namespace TunicRandomizer {
         private const int LANTERNLESS = 128;
         private const int MASKLESS = 256;
         private const int MYSTERY_SEED = 512;
-        private const int ALTERNATE_LOGIC = 512;
+        private const int SHUFFLE_LADDERS = 1024;
+        private const int ALTERNATE_LOGIC = 4096;
         public GameModes GameMode {
             get;
             set;
@@ -109,6 +111,11 @@ namespace TunicRandomizer {
             set;
         }
 
+        public bool ShuffleLadders {
+            get;
+            set;
+        }
+
         // Archipelago Settings
         public bool DeathLinkEnabled {
             get;
@@ -171,9 +178,7 @@ namespace TunicRandomizer {
         private const int CHEST_INTERRUPTION = 32;
         private const int SKIP_ITEM_POPUPS = 64;
         private const int FASTER_UPGRADES = 128;        
-        private const int CAMERA_FLIP = 256;
-        private const int MORE_SKULLS = 512;
-        private const int ARACHNOPHOBIA_MODE = 1024;
+
         public bool HeirAssistModeEnabled {
             get;
             set;
@@ -214,7 +219,15 @@ namespace TunicRandomizer {
             set;
         }
 
-
+        // Other settings
+        private const int CAMERA_FLIP = 1;
+        private const int MORE_SKULLS = 2;
+        private const int ARACHNOPHOBIA_MODE = 4;
+        private const int HOLY_CROSS_VIEWER = 8;
+        private const int MUSIC_SHUFFLE = 16;
+        private const int SEEDED_MUSIC = 32;
+        private const int BIGGER_HEAD_MODE = 64;
+        private const int TINIER_FOX_MODE = 128;
         public bool CameraFlip {
             get;
             set;
@@ -230,11 +243,44 @@ namespace TunicRandomizer {
             set;
         }
 
+        public bool HolyCrossVisualizer {
+            get;
+            set;
+        }
+
+        public bool MusicShuffle {
+            get;
+            set;
+        }
+
+        public bool SeededMusic {
+            get;
+            set;
+        }
+
+        public Dictionary<string, bool> MusicToggles {
+            get;
+            set;
+        }
+
+        public bool BiggerHeadMode {
+            get;
+            set;
+        }
+
+        public bool TinierFoxMode {
+            get;
+            set;
+        }
+
         // Enemy Randomization Settings
         private const int ENEMY_RANDOMIZER = 1;
         private const int EXTRA_ENEMIES = 2;
         private const int BALANCED_ENEMIES = 4;
         private const int SEEDED_ENEMIES = 8;
+        private const int EXCLUDE_ENEMIES = 16;
+        private const int LIMIT_BOSS_SPAWNS = 32;
+        private const int OOPS_ALL_ENEMY = 64;
         public bool EnemyRandomizerEnabled {
             get;
             set;
@@ -251,6 +297,26 @@ namespace TunicRandomizer {
         }
 
         public bool SeededEnemies {
+            get;
+            set;
+        }
+
+        public bool LimitBossSpawns {
+            get;
+            set;
+        }
+
+        public bool OopsAllEnemy {
+            get;
+            set;
+        }
+
+        public bool UseEnemyToggles {
+            get;
+            set;
+        }
+
+        public Dictionary<string, bool> EnemyToggles {
             get;
             set;
         }
@@ -349,6 +415,7 @@ namespace TunicRandomizer {
             Lanternless = false;
             Maskless = false;
             MysterySeed = false;
+            ShuffleLadders = false;
             AlternateLogic = false;
 
             // Archipelago 
@@ -378,12 +445,28 @@ namespace TunicRandomizer {
             CameraFlip = false;
             MoreSkulls = false;
             ArachnophobiaMode = false;
+            HolyCrossVisualizer = false;
+            BiggerHeadMode = false;
+            TinierFoxMode = false;
+            MusicShuffle = false;
+            SeededMusic = false;
+            MusicToggles = new Dictionary<string, bool>();
+            foreach(string track in MusicShuffler.Tracks.Keys) {
+                MusicToggles.Add(track, true);
+            }
 
             // Enemy Randomizer
             EnemyRandomizerEnabled = false;
             BalancedEnemies = true;
             SeededEnemies = true;
             ExtraEnemiesEnabled = false;
+            LimitBossSpawns = true;
+            UseEnemyToggles = false;
+            OopsAllEnemy = false;
+            EnemyToggles = new Dictionary<string, bool>();
+            foreach(string enemy in EnemyRandomizer.EnemyToggleOptionNames.Values) {
+                EnemyToggles.Add(enemy, true);
+            }
 
             // Race Settings
             RaceMode = false;
@@ -399,17 +482,6 @@ namespace TunicRandomizer {
             UseCustomTexture = false;
         }
 
-        public RandomizerSettings(bool hintsEnabled, bool randomFoxColorsEnabled) {
-            HeroPathHintsEnabled = hintsEnabled;
-            RandomFoxColorsEnabled = randomFoxColorsEnabled;
-        }
-
-        public RandomizerSettings(bool hintsEnabled, bool randomFoxColorsEnabled, bool heirAssistEnaled) {
-            HeroPathHintsEnabled = hintsEnabled;
-            RandomFoxColorsEnabled = randomFoxColorsEnabled;
-            HeirAssistModeEnabled = heirAssistEnaled;
-        }
-
         public string GetSettingsString() {
             string EncodedSettings = Convert.ToBase64String(Encoding.UTF8.GetBytes(
                 $"{HexagonQuestGoal}" +
@@ -420,7 +492,9 @@ namespace TunicRandomizer {
                 $":{Convert.ToInt32(sToB(generalSettings()), 2)}" +
                 $":{Convert.ToInt32(sToB(hintSettings()), 2)}" +
                 $":{Convert.ToInt32(sToB(enemySettings()), 2)}" +
-                $":{Convert.ToInt32(sToB(raceSettings()), 2)}"));
+                $":{Convert.ToInt32(sToB(raceSettings()), 2)}" +
+                $":{Convert.ToInt32(sToB(otherSettings()), 2)}" +
+                $":{ConvertEnemyToggles()}"));
             string seed;
             if (SceneManager.GetActiveScene().name != "TitleScreen") {
                 seed = SaveFile.GetInt("seed").ToString();
@@ -429,7 +503,6 @@ namespace TunicRandomizer {
                 QuickSettings.CustomSeed = seed;
             }
             string SettingsString = $"tunc:{PluginInfo.VERSION}:{seed}:{EncodedSettings}";
-            GUIUtility.systemCopyBuffer = SettingsString;
             return SettingsString;
         }
 
@@ -460,6 +533,7 @@ namespace TunicRandomizer {
                 Lanternless = eval(logic, LANTERNLESS);
                 Maskless = eval(logic, MASKLESS);
                 MysterySeed = eval(logic, MYSTERY_SEED);
+                ShuffleLadders = eval(logic, SHUFFLE_LADDERS);
                 AlternateLogic = eval(logic, ALTERNATE_LOGIC);
 
                 int general = int.Parse(decodedSplit[5]);
@@ -475,6 +549,9 @@ namespace TunicRandomizer {
                 CameraFlip = eval(general, CAMERA_FLIP);
                 MoreSkulls = eval(general, MORE_SKULLS);
                 ArachnophobiaMode = eval(general, ARACHNOPHOBIA_MODE);
+                HolyCrossVisualizer = eval(general, HOLY_CROSS_VIEWER);
+                MusicShuffle = eval(general, MUSIC_SHUFFLE);
+                SeededMusic = eval(general, SEEDED_MUSIC);
 
                 int hints = int.Parse(decodedSplit[6]);
                 HeroPathHintsEnabled = eval(hints, PATH_OF_HERO);
@@ -489,6 +566,9 @@ namespace TunicRandomizer {
                 ExtraEnemiesEnabled = eval(enemies, EXTRA_ENEMIES);
                 BalancedEnemies = eval(enemies, BALANCED_ENEMIES);
                 SeededEnemies = eval(enemies, SEEDED_ENEMIES);
+                UseEnemyToggles = eval(enemies, EXCLUDE_ENEMIES);
+                LimitBossSpawns = eval(enemies, LIMIT_BOSS_SPAWNS);
+                OopsAllEnemy = eval(enemies, OOPS_ALL_ENEMY);
 
                 int race = int.Parse(decodedSplit[8]);
                 RaceMode = eval(race, RACE_MODE);
@@ -498,9 +578,23 @@ namespace TunicRandomizer {
                 DisableLadderStorage = eval(race, LADDER_STORAGE);
                 DisableUpgradeStealing = eval(race, UPGRADE_STEALING);
 
+                if (decodedSplit.Length >= 11) {
+                    int other = int.Parse(decodedSplit[9]);
+                    CameraFlip = eval(other, CAMERA_FLIP);
+                    MoreSkulls = eval(other, MORE_SKULLS);
+                    ArachnophobiaMode = eval(other, ARACHNOPHOBIA_MODE);
+                    HolyCrossVisualizer = eval(other, HOLY_CROSS_VIEWER);
+                    MusicShuffle = eval(other, MUSIC_SHUFFLE);
+                    SeededMusic = eval(other, SEEDED_MUSIC);
+                    BiggerHeadMode = eval(other, BIGGER_HEAD_MODE);
+                    TinierFoxMode = eval(other, TINIER_FOX_MODE);
+
+                    ParseEnemyToggles(decodedSplit[10]);
+                }
+
                 OptionsGUIPatches.SaveSettings();
             } catch (Exception e) {
-                TunicRandomizer.Logger.LogInfo("Error parsing settings string!");
+                TunicLogger.LogInfo("Error parsing settings string!" + e.Message + " " + e.Source + " " + e.StackTrace);
             }
         }
 
@@ -518,22 +612,29 @@ namespace TunicRandomizer {
                     GameMode == GameModes.HEXAGONQUEST,
                     KeysBehindBosses, StartWithSwordEnabled, SwordProgressionEnabled,
                     ShuffleAbilities, EntranceRandoEnabled, ERFixedShop,
-                    Lanternless, Maskless, MysterySeed, AlternateLogic
+                    Lanternless, Maskless, MysterySeed, ShuffleLadders, AlternateLogic
                 };
             } else {
                 return new bool[] { 
                     SaveFile.GetInt(SaveFlags.HexagonQuestEnabled) == 1, SaveFile.GetInt(SaveFlags.KeysBehindBosses) == 1,
-                    SaveFile.GetInt(SaveFlags.SwordProgressionEnabled) == 1, SaveFile.GetInt("randomizer started with sword") == 1,
+                    SaveFile.GetInt("randomizer started with sword") == 1, SaveFile.GetInt(SaveFlags.SwordProgressionEnabled) == 1,
                     SaveFile.GetInt(SaveFlags.AbilityShuffle) == 1, SaveFile.GetInt(SaveFlags.EntranceRando) == 1,
                     SaveFile.GetInt("randomizer ER fixed shop") == 1, SaveFile.GetInt(SaveFlags.LanternlessLogic) == 1,
-                    SaveFile.GetInt(SaveFlags.MasklessLogic) == 1, SaveFile.GetInt("randomizer mystery seed") == 1, SaveFile.GetInt("randomizer alternate logic") == 1
+                    SaveFile.GetInt(SaveFlags.MasklessLogic) == 1, SaveFile.GetInt("randomizer mystery seed") == 1, 
+                    SaveFile.GetInt(SaveFlags.LadderRandoEnabled) == 1
+                    SaveFile.GetInt("randomizer alternate logic") == 1
                 };
             }
         }
 
         public bool[] generalSettings() {
             return new bool[] { HeirAssistModeEnabled, ClearEarlyBushes, EnableAllCheckpoints, CheaperShopItemsEnabled, 
-                BonusStatUpgradesEnabled, DisableChestInterruption, SkipItemAnimations, FasterUpgrades, CameraFlip, MoreSkulls, ArachnophobiaMode, };
+                BonusStatUpgradesEnabled, DisableChestInterruption, SkipItemAnimations, FasterUpgrades };
+        }
+
+        public bool[] otherSettings() {
+            return new bool[] { CameraFlip, MoreSkulls,
+                ArachnophobiaMode, HolyCrossVisualizer, MusicShuffle, SeededMusic, BiggerHeadMode, TinierFoxMode };
         }
 
         public bool[] hintSettings() {
@@ -542,7 +643,30 @@ namespace TunicRandomizer {
         }
 
         public bool[] enemySettings() {
-            return new bool[] { EnemyRandomizerEnabled, ExtraEnemiesEnabled, BalancedEnemies, SeededEnemies };
+            return new bool[] { EnemyRandomizerEnabled, ExtraEnemiesEnabled, BalancedEnemies, SeededEnemies, UseEnemyToggles, LimitBossSpawns, OopsAllEnemy };
+        }
+
+        private string ConvertEnemyToggles() {
+            string bools = sToB(EnemyToggles.Values.ToArray());
+            string ret = "";
+            for (int i = 0; i < bools.Length; i += 64) {
+                ret += Convert.ToInt64(bools.Substring(i, i + 64 > bools.Length ? bools.Length - i : 64), 2) + ";";
+            }
+            return ret.TrimEnd(';');
+        }
+
+        private void ParseEnemyToggles(string Toggles) {
+            string enemyFlags = "";
+            foreach (string x in Toggles.Split(';')) {
+                enemyFlags += Convert.ToString(Int64.Parse(x), 2).PadLeft(enemyFlags.Length + 64 > EnemyToggles.Count ? EnemyToggles.Count - 64 : 64, '0');
+            }
+            enemyFlags = new string(enemyFlags.ToCharArray().Reverse().ToArray());
+
+            List<string> enemyNames = EnemyToggles.Keys.ToList();
+
+            for (int i = 0; i < enemyFlags.Length; i++) {
+                EnemyToggles[enemyNames[i]] = enemyFlags[i] == '1';
+            }
         }
 
         public bool[] raceSettings() {
@@ -550,8 +674,8 @@ namespace TunicRandomizer {
                 DisableLadderStorage, DisableUpgradeStealing, };
         }
 
-        public static void getSettings() {
-            TunicRandomizer.Settings.GetSettingsString();
+        public static void copySettings() {
+            GUIUtility.systemCopyBuffer = TunicRandomizer.Settings.GetSettingsString();
         }
     }
 }

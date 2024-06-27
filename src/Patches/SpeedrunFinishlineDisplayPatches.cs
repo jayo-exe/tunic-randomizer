@@ -13,8 +13,7 @@ using static TunicRandomizer.SaveFlags;
 
 namespace TunicRandomizer {
     public class SpeedrunFinishlineDisplayPatches {
-        private static ManualLogSource Logger = TunicRandomizer.Logger;
-
+        
         public static Dictionary<string, string> ReportGroupItems = new Dictionary<string, string>(){
             {"Inventory items_stick", "Stick"},
             {"Inventory items_sword", "Sword"},
@@ -309,13 +308,11 @@ namespace TunicRandomizer {
                 int ChecksFound = 0;
                 float Percentage = 0;
                 foreach (string Key in Locations.VanillaLocations.Keys) {
-                    foreach (Dictionary<string, int> requirements in Locations.VanillaLocations[Key].Location.RequiredItems) {
-                        if (requirements.ContainsKey("21")) {
-                            TotalChecks++;
-                            if (Locations.CheckedLocations[Key] || (SaveFlags.IsArchipelago() && TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Key} was collected") == 1)) {
-                                ChecksFound++;
-                            }
-                            break;
+                    Check check = Locations.VanillaLocations[Key];
+                    if (check.Location.Requirements.Any(req => req.ContainsKey("21")) || new List<string>() { "Mountaintop", "Town_FiligreeRoom", "EastFiligreeCache" }.Contains(check.Location.SceneName)) {
+                        TotalChecks++;
+                        if (Locations.CheckedLocations[Key] || (SaveFlags.IsArchipelago() && TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Key} was collected") == 1)) {
+                            ChecksFound++;
                         }
                     }
                 }
@@ -330,16 +327,9 @@ namespace TunicRandomizer {
             }
 
             if (Area == "Bosses Defeated") {
-                List<string> BossStateVars = new List<string>() {
-                    "SV_Forest Boss Room_Skuladot redux Big",
-                    "SV_Archipelagos Redux TUNIC Knight is Dead",
-                    "SV_Fortress Arena_Spidertank Is Dead",
-                    "Librarian Dead Forever",
-                    "SV_ScavengerBossesDead"
-                };
                 int BossesDefeated = 0;
-                foreach (string BossState in BossStateVars) {
-                    if (StateVariable.GetStateVariableByName(BossState).BoolValue) {
+                foreach (string BossState in EnemyRandomizer.CustomBossFlags) {
+                    if (SaveFile.GetInt(BossState) == 1) {
                         BossesDefeated++;
                     }
                 }

@@ -56,7 +56,7 @@ namespace TunicRandomizer {
             }
         }
 
-        public static void MagicSpell_CheckInput_PostfixPatch(MagicSpell __instance, Il2CppStructArray<DPAD> inputs, int length) {
+        public static void MagicSpell_CheckInput_PostfixPatch(MagicSpell __instance, Il2CppStructArray<DPAD> inputs, int length, ref bool __result) {
             WaveSpell WaveSpell = __instance.TryCast<WaveSpell>();
             if (WaveSpell != null) {
                 WaveSpell.CheckInput(inputs, length);

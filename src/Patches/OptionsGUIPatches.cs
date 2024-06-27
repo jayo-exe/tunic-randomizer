@@ -1,22 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using UnityEngine;
 using UnhollowerBaseLib;
 using UnhollowerRuntimeLib;
-using BepInEx.Logging;
 using Newtonsoft.Json;
 using static TunicRandomizer.SaveFlags;
-using static TunicRandomizer.RandomizerSettings;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using FMODUnity;
 
 namespace TunicRandomizer {
     public class OptionsGUIPatches {
-
-        private static ManualLogSource Logger = TunicRandomizer.Logger;
 
         public static bool BonusOptionsUnlocked = false;
 
@@ -33,8 +29,9 @@ namespace TunicRandomizer {
             addPageButton("Archipelago Settings", ArchipelagoSettingsPage);
             addPageButton("Hint Settings", HintsSettingsPage);
             addPageButton("Enemy Randomizer Settings", EnemyRandomizerSettings);
-            addPageButton("Fox Customization", CustomFoxSettingsPage);
+            addPageButton("Fox Customization Settings", CustomFoxSettingsPage);
             addPageButton("Race Mode Settings", RaceSettingsPage);
+            addPageButton("Music Shuffle Settings", MusicSettingsPage);
             addPageButton("Other Settings", OtherSettingsPage);
         }
 
@@ -60,6 +57,7 @@ namespace TunicRandomizer {
                 OptionsGUI.addToggle("Sword Progression", "Off", "On", TunicRandomizer.Settings.SwordProgressionEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleSwordProgression);
                 OptionsGUI.addToggle("Start With Sword", "Off", "On", TunicRandomizer.Settings.StartWithSwordEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleStartWithSword);
                 OptionsGUI.addToggle("Shuffle Abilities", "Off", "On", TunicRandomizer.Settings.ShuffleAbilities ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleAbilityShuffling);
+                OptionsGUI.addToggle("Shuffle Ladders", "Off", "On", TunicRandomizer.Settings.ShuffleLadders ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleLadderShuffle);
                 OptionsGUI.addToggle("Entrance Randomizer", "Off", "On", TunicRandomizer.Settings.EntranceRandoEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleEntranceRando);
                 OptionsGUI.addToggle("Entrance Randomizer: Fewer Shops", "Off", "On", TunicRandomizer.Settings.ERFixedShop ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleFixedShop);
                 OptionsGUI.addMultiSelect("Fool Traps", FoolTrapOptions, GetFoolTrapIndex(), (OptionsGUIMultiSelect.MultiSelectAction)ChangeFoolTrapFrequency).wrap = true;
@@ -88,6 +86,7 @@ namespace TunicRandomizer {
                 OptionsGUI.addButton("Sword Progression", SaveFile.GetInt("randomizer sword progression enabled") == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
                 OptionsGUI.addButton("Started With Sword", SaveFile.GetInt("randomizer started with sword") == 1 ? "<#00ff00>Yes" : "<#ff0000>No", null);
                 OptionsGUI.addButton("Shuffled Abilities", SaveFile.GetInt("randomizer shuffled abilities") == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
+                OptionsGUI.addButton("Shuffled Ladders", SaveFile.GetInt("randomizer ladder rando enabled") == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
                 OptionsGUI.addButton("Entrance Randomizer", SaveFile.GetInt("randomizer entrance rando enabled") == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
                 if (SaveFile.GetInt("randomizer entrance rando enabled") == 1 && IsSinglePlayer()) {
                     OptionsGUI.addButton("Entrance Randomizer: Fewer Shops", SaveFile.GetInt("randomizer ER fixed shop") == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
@@ -96,6 +95,7 @@ namespace TunicRandomizer {
                 OptionsGUI.addButton("Lanternless Logic", SaveFile.GetInt(LanternlessLogic) == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
                 OptionsGUI.addButton("Maskless Logic", SaveFile.GetInt(MasklessLogic) == 1 ? "<#00ff00>On" : "<#ff0000>Off", null);
                 OptionsGUI.addMultiSelect("Fool Traps", FoolTrapOptions, GetFoolTrapIndex(), (OptionsGUIMultiSelect.MultiSelectAction)ChangeFoolTrapFrequency).wrap = true;
+                OptionsGUI.addButton("Copy Settings String", (Action)RandomizerSettings.copySettings);
             }
         }
 
@@ -133,6 +133,49 @@ namespace TunicRandomizer {
             OptionsGUI.addToggle("Extra Enemies", "Off", "On", TunicRandomizer.Settings.ExtraEnemiesEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleExtraEnemies);
             OptionsGUI.addToggle("Balanced Enemies", "Off", "On", TunicRandomizer.Settings.BalancedEnemies ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleBalancedEnemies);
             OptionsGUI.addToggle("Seeded Enemies", "Off", "On", TunicRandomizer.Settings.SeededEnemies ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleSeededEnemies);
+            OptionsGUI.addToggle("Limit Boss Spawns", "Off", "On", TunicRandomizer.Settings.LimitBossSpawns ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.LimitBossSpawns = !TunicRandomizer.Settings.LimitBossSpawns; SaveSettings(); }));
+            OptionsGUI.addToggle("Oops! All [Enemy]", "Off", "On", TunicRandomizer.Settings.OopsAllEnemy ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.OopsAllEnemy = !TunicRandomizer.Settings.OopsAllEnemy; SaveSettings(); }));
+            OptionsGUI.addToggle("Use Enemy Toggles", "Off", "On", TunicRandomizer.Settings.UseEnemyToggles ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleExcludeEnemies);
+            addPageButton("Configure Enemy Toggles", EnemyTogglesPage);
+        }
+
+        public static void EnemyTogglesPage() {
+            OptionsGUI OptionsGUI = GameObject.FindObjectOfType<OptionsGUI>();
+            OptionsGUI.setHeading("Enemy Toggles");
+
+            Action<int, bool> toggleAllEnemies = (int index, bool toggle) => {
+                GameObject.FindObjectsOfType<OptionsGUIMultiSelect>().ToList().ForEach((button) => {
+                    button.SelectIndex(index);
+                    TunicRandomizer.Settings.EnemyToggles[button.leftAlignedText.text] = toggle;
+                });
+                SaveSettings();
+            };
+
+            OptionsGUI.addButton("Toggle All Enemies ON", (Action)(() => {
+                toggleAllEnemies(1, true);
+            })); 
+            OptionsGUI.addButton("Toggle All Enemies OFF", (Action)(() => {
+                toggleAllEnemies(0, false);
+            }));
+
+            OptionsGUI.addButton("Randomize All", (Action)(() => {
+                System.Random random = new System.Random();
+                GameObject.FindObjectsOfType<OptionsGUIMultiSelect>().ToList().ForEach((button) => {
+                    int selection = random.Next(2);
+                    button.SelectIndex(selection);
+                    TunicRandomizer.Settings.EnemyToggles[button.leftAlignedText.text] = selection == 1;
+                }); SaveSettings();
+            }));
+            Dictionary<string, Action<int>> toggles = new Dictionary<string, Action<int>>();
+            foreach(string enemy in EnemyRandomizer.EnemyToggleOptionNames.Values) {
+                toggles.Add(enemy, (int index) => {
+                    TunicRandomizer.Settings.EnemyToggles[enemy] = !TunicRandomizer.Settings.EnemyToggles[enemy];
+                    SaveSettings();
+                });
+            }
+            foreach (string enemy in EnemyRandomizer.EnemyToggleOptionNames.Values) {
+                OptionsGUI.addToggle(enemy, "Off", "On", TunicRandomizer.Settings.EnemyToggles[enemy] ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)toggles[enemy]);
+            }
         }
 
         public static void CustomFoxSettingsPage() {
@@ -140,7 +183,16 @@ namespace TunicRandomizer {
             OptionsGUI.setHeading("Fox Customization");
             OptionsGUI.addToggle("Random Fox Colors", "Off", "On", TunicRandomizer.Settings.RandomFoxColorsEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleRandomFoxPalette);
             OptionsGUI.addToggle("Keepin' It Real", "Off", "On", TunicRandomizer.Settings.RealestAlwaysOn ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleSunglasses);
-            OptionsGUI.addToggle("Show Fox Color Editor", "Off", "On", PaletteEditor.EditorOpen ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)TogglePaletteEditor);
+            OptionsGUI.addButton($"Open Fox Color Editor", (Action)(() => {
+                if (SceneManager.GetActiveScene().name == "TitleScreen") {
+                    GenericMessage.ShowMessage($"\"Fox Color Editor can only\"\n\"be opened while in-game.\"");
+                } else {
+                    PaletteEditor.EditorOpen = true; 
+                    CameraController.DerekZoom = 0.35f; 
+                    GUIMode.ClearStack(); 
+                    GUIMode.PushGameMode(); 
+                }
+            }));
             OptionsGUI.addToggle("Use Custom Texture", "Off", "On", TunicRandomizer.Settings.UseCustomTexture ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleCustomTexture);
             if (BonusOptionsUnlocked && SceneLoaderPatches.SceneName != "TitleScreen") {
                 OptionsGUI.addToggle("<#FFA500>BONUS: Cel Shaded Fox", "Off", "On", PaletteEditor.CelShadingEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleCelShading);
@@ -170,8 +222,71 @@ namespace TunicRandomizer {
             OptionsGUI.addToggle("???", "Off", "On", TunicRandomizer.Settings.CameraFlip ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleWeirdMode);
             OptionsGUI.addToggle("More Skulls", "Off", "On", TunicRandomizer.Settings.MoreSkulls ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleMoreSkulls);
             OptionsGUI.addToggle("Arachnophobia Mode", "Off", "On", TunicRandomizer.Settings.ArachnophobiaMode ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleArachnophobiaMode);
+            OptionsGUI.addToggle("Holy Cross DDR", "Off", "On", TunicRandomizer.Settings.HolyCrossVisualizer ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleHolyCrossViewer);
+            OptionsGUI.addToggle("Bigger Head Mode", "Off", "On", TunicRandomizer.Settings.BiggerHeadMode ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.BiggerHeadMode = !TunicRandomizer.Settings.BiggerHeadMode; SaveSettings(); }));
+            OptionsGUI.addToggle("Tinier Fox Mode", "Off", "On", TunicRandomizer.Settings.TinierFoxMode ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.TinierFoxMode = !TunicRandomizer.Settings.TinierFoxMode; SaveSettings(); }));
             if (SecretMayor.shouldBeActive || SecretMayor.isCorrectDate()) {
                 OptionsGUI.addToggle("Mr Mayor", "Off", "On", SecretMayor.shouldBeActive ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)SecretMayor.ToggleMayorSecret);
+            }
+        }
+
+        public static void MusicSettingsPage() {
+            OptionsGUI OptionsGUI = GameObject.FindObjectOfType<OptionsGUI>();
+            OptionsGUI.setHeading("Music Shuffle");
+            OptionsGUI.addToggle("Music Shuffle", "Off", "On", TunicRandomizer.Settings.MusicShuffle ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.MusicShuffle = !TunicRandomizer.Settings.MusicShuffle; SaveSettings(); }));
+            OptionsGUI.addToggle("Seeded Music", "Off", "On", TunicRandomizer.Settings.SeededMusic ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)((int index) => { TunicRandomizer.Settings.SeededMusic = !TunicRandomizer.Settings.SeededMusic; SaveSettings(); }));
+            addPageButton("Configure Music Toggles", MusicTogglesPage);
+            addPageButton("Jukebox", JukeboxPage);
+        }
+
+        public static void MusicTogglesPage() {
+            OptionsGUI OptionsGUI = GameObject.FindObjectOfType<OptionsGUI>();
+            OptionsGUI.setHeading("Music Toggles");
+
+            Action<int, bool> toggleAllSongs = (int index, bool toggle) => {
+                GameObject.FindObjectsOfType<OptionsGUIMultiSelect>().ToList().ForEach((button) => {
+                    button.SelectIndex(index);
+                    TunicRandomizer.Settings.MusicToggles[button.leftAlignedText.text] = toggle;
+                });
+                SaveSettings();
+            };
+
+            OptionsGUI.addButton("Toggle All Tracks ON", (Action)(() => {
+                toggleAllSongs(1, true);
+            }));
+            OptionsGUI.addButton("Toggle All Tracks OFF", (Action)(() => {
+                toggleAllSongs(0, false);
+            }));
+
+            OptionsGUI.addButton("Randomize All", (Action)(() => {
+                System.Random random = new System.Random();
+                GameObject.FindObjectsOfType<OptionsGUIMultiSelect>().ToList().ForEach((button) => {
+                    int selection = random.Next(2);
+                    button.SelectIndex(selection);
+                    TunicRandomizer.Settings.MusicToggles[button.leftAlignedText.text] = selection == 1;
+                }); SaveSettings();
+            }));
+            Dictionary<string, Action<int>> toggles = new Dictionary<string, Action<int>>();
+            foreach (string track in MusicShuffler.Tracks.Keys) {
+                toggles.Add(track, (int index) => {
+                    TunicRandomizer.Settings.MusicToggles[track] = !TunicRandomizer.Settings.MusicToggles[track];
+                    SaveSettings();
+                });
+            }
+            foreach (string track in MusicShuffler.Tracks.Keys) {
+                OptionsGUI.addToggle(track, "Off", "On", TunicRandomizer.Settings.MusicToggles[track] ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)toggles[track]);
+            }
+        }
+
+        public static void JukeboxPage() {
+            OptionsGUI OptionsGUI = GameObject.FindObjectOfType<OptionsGUI>();
+            OptionsGUI.setHeading("Jukebox");
+            OptionsGUI.addButton("Play Random Track", (Action)(() => {
+                string randomTrack = MusicShuffler.Tracks.Keys.ToList()[new System.Random().Next(MusicShuffler.Tracks.Count)];
+                MusicShuffler.PlayTrack(randomTrack, MusicShuffler.Tracks[randomTrack]); 
+            }));
+            foreach (KeyValuePair<string, EventReference> pair in MusicShuffler.Tracks) {
+                OptionsGUI.addButton(pair.Key, (Action)(() => { MusicShuffler.PlayTrack(pair.Key, pair.Value); }));
             }
         }
 
@@ -226,6 +341,11 @@ namespace TunicRandomizer {
 
         public static void ToggleAbilityShuffling(int index) {
             TunicRandomizer.Settings.ShuffleAbilities = !TunicRandomizer.Settings.ShuffleAbilities;
+            SaveSettings();
+        }
+
+        public static void ToggleLadderShuffle(int index) {
+            TunicRandomizer.Settings.ShuffleLadders = !TunicRandomizer.Settings.ShuffleLadders;
             SaveSettings();
         }
 
@@ -418,6 +538,11 @@ namespace TunicRandomizer {
             SaveSettings();
         }
 
+        public static void ToggleHolyCrossViewer(int index) {
+            TunicRandomizer.Settings.HolyCrossVisualizer = !TunicRandomizer.Settings.HolyCrossVisualizer;
+            SaveSettings();
+        }
+
         // Enemy Randomizer
         public static void ToggleEnemyRandomizer(int index) {
             TunicRandomizer.Settings.EnemyRandomizerEnabled = !TunicRandomizer.Settings.EnemyRandomizerEnabled;
@@ -439,6 +564,12 @@ namespace TunicRandomizer {
             SaveSettings();
         }
 
+        public static void ToggleExcludeEnemies(int index) {
+            TunicRandomizer.Settings.UseEnemyToggles = !TunicRandomizer.Settings.UseEnemyToggles;
+            SaveSettings();
+        }
+
+        // Other
         public static void ToggleWeirdMode(int index) {
             TunicRandomizer.Settings.CameraFlip = !TunicRandomizer.Settings.CameraFlip;
             CameraController.Flip = TunicRandomizer.Settings.CameraFlip;
@@ -457,11 +588,6 @@ namespace TunicRandomizer {
                 }
             }
             SaveSettings();
-        }
-
-        public static void TogglePaletteEditor(int index) {
-            PaletteEditor.EditorOpen = !PaletteEditor.EditorOpen;
-            CameraController.DerekZoom = PaletteEditor.EditorOpen ? 0.35f : 1f;
         }
 
         public static void ToggleCustomTexture(int index) {
@@ -543,33 +669,57 @@ namespace TunicRandomizer {
         }
 
         public static void FileManagementGUI_rePopulateList_PostfixPatch(FileManagementGUI __instance) {
+            Sprite ArchipelagoSprite = ModelSwaps.CustomItemImages["Archipelago Item"].GetComponent<Image>().sprite;
+            string[] fileNameList = SaveFile.GetRootSaveFileNameList();
             foreach (FileManagementGUIButton button in GameObject.FindObjectsOfType<FileManagementGUIButton>()) {
-                SaveFile.LoadFromPath(SaveFile.GetRootSaveFileNameList()[button.index]);
+                SaveFile.LoadFromPath(fileNameList[button.index]);
                 if ((SaveFile.GetInt("archipelago") != 0 || SaveFile.GetInt("randomizer") != 0) && !button.isSpecial) {
                     // Display special icon and "randomized" text to indicate randomizer file
                     button.specialBadge.gameObject.active = true;
-                    button.specialBadge.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
-                    button.specialBadge.transform.localPosition = new Vector3(-75f, -27f, 0f);
-                    
-                    if (SaveFile.GetInt(HexagonQuestEnabled) == 1) { 
-                        button.ngpBadge.gameObject.SetActive(true);
-                        button.ngpBadge.sprite = Inventory.GetItemByName("Hexagon Gold").icon;
+
+                    if (SaveFile.GetInt(HexagonQuestEnabled) == 1) {
+                        button.manpageTMP.transform.parent.GetComponent<Image>().sprite = Inventory.GetItemByName("Hexagon Gold").icon;
+                        button.manpageTMP.text = $"{SaveFile.GetInt(GoldHexagonQuantity)}/{SaveFile.GetInt(HexagonQuestGoal)}";
+                    } else {
+                        // Display randomized page count instead of "vanilla" pages picked up
+                        int Pages = 0;
+                        for (int i = 0; i < 28; i++) {
+                            if (SaveFile.GetInt($"randomizer obtained page {i}") == 1) {
+                                Pages++;
+                            }
+                        }
+                        button.manpageTMP.text = Pages.ToString();
                     }
-                    button.playtimeString.enableAutoSizing = false;
-                    if (SaveFile.GetInt("archipelago") != 0) {
-                        button.playtimeString.text += $" <size=65%>archipelago";
-                        button.filenameTMP.text += $" <size=65%>({SaveFile.GetString("archipelago player name")})";
-                    } else if (SaveFile.GetInt("randomizer") != 0) {
-                        button.playtimeString.text += $" <size=70%>randomized";
-                    }
-                    // Display randomized page count instead of "vanilla" pages picked up
-                    int Pages = 0;
-                    for (int i = 0; i < 28; i++) {
-                        if (SaveFile.GetInt($"randomizer obtained page {i}") == 1) {
-                            Pages++;
+                    List<ItemPresentationGraphic> itemPgs = button.itemPresentationGraphics.ToList();
+                    GameObject dathStone = GameObject.Instantiate(itemPgs[0].gameObject);
+                    dathStone.transform.parent = button.transform.GetChild(3);
+                    dathStone.transform.localPosition = Vector3.zero;
+                    dathStone.transform.localScale = Vector3.one * 1.15f;
+                    dathStone.GetComponent<Image>().sprite = Inventory.GetItemByName("Dath Stone").icon;
+                    dathStone.GetComponent<ItemPresentationGraphic>().items = new Item[] { Inventory.GetItemByName("Dath Stone") };
+                    itemPgs.Add(dathStone.GetComponent<ItemPresentationGraphic>());
+                    button.itemPresentationGraphics = itemPgs.ToArray();
+                    dathStone.SetActive(Inventory.GetItemByName("Dath Stone").Quantity > 0);
+
+                    if (SaveFile.GetInt(SwordProgressionEnabled) == 1) {
+                        if (SaveFile.GetInt(SwordProgressionLevel) == 3) {
+                            button.itemPresentationGraphics[0].GetComponent<Image>().sprite = Inventory.GetItemByName("Librarian Sword").icon;
+                            button.itemPresentationGraphics[0].items = new Item[] { Inventory.GetItemByName("Librarian Sword") };
+                        }
+                        if (SaveFile.GetInt(SwordProgressionLevel) == 3) {
+                            button.itemPresentationGraphics[0].GetComponent<Image>().sprite = Inventory.GetItemByName("Heir Sword").icon;
+                            button.itemPresentationGraphics[0].items = new Item[] { Inventory.GetItemByName("Heir Sword") };
                         }
                     }
-                    button.manpageTMP.text = Pages.ToString();
+
+                    button.playtimeString.enableAutoSizing = false;
+                    if (SaveFile.GetInt("archipelago") != 0) {
+                        button.playtimeString.text += $" <size=55%>archipelago";
+                        button.filenameTMP.text += $" <size=65%>({SaveFile.GetString("archipelago player name")})";
+                        button.specialBadge.sprite = ArchipelagoSprite;
+                    } else if (SaveFile.GetInt("randomizer") != 0) {
+                        button.playtimeString.text += $" <size=60%>randomized";
+                    }
                 }
             }
         }

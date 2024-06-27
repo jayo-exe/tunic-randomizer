@@ -1,4 +1,5 @@
-﻿using BepInEx.Logging;
+﻿using Archipelago.MultiClient.Net.Models;
+using BepInEx.Logging;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -9,8 +10,7 @@ using static TunicRandomizer.SaveFlags;
 namespace TunicRandomizer {
 
     public class ItemTracker {
-        private static ManualLogSource Logger = TunicRandomizer.Logger;
-
+        
         public struct SceneInfo {
             public int SceneId;
             public string SceneName;
@@ -82,9 +82,11 @@ namespace TunicRandomizer {
             foreach (string Key in ImportantItems.Keys.ToList()) {
                 ImportantItems[Key] = 0;
             }
+            if (SaveFile.GetInt(HexagonQuestEnabled) == 1) {
+                TunicRandomizer.Tracker.ImportantItems["Pages"] = 28;
+            }
             ImportantItems["Trinket Slot"] = 1;
             ImportantItems["Coins Tossed"] = StateVariable.GetStateVariableByName("Trinket Coins Tossed").IntValue;
-
             ItemsCollected = new List<ItemData>();
         }
 
@@ -94,11 +96,16 @@ namespace TunicRandomizer {
         }
 
         public void ResetTracker() {
-            Seed = 0;
+            Seed = SaveFile.GetInt("seed");
             foreach (string Key in ImportantItems.Keys.ToList()) {
                 ImportantItems[Key] = 0;
             }
+            if (SaveFile.GetInt(HexagonQuestEnabled) == 1) {
+                TunicRandomizer.Tracker.ImportantItems["Pages"] = 28;
+            }
             ImportantItems["Trinket Slot"] = 1;
+            ImportantItems["Coins Tossed"] = StateVariable.GetStateVariableByName("Trinket Coins Tossed").IntValue;
+            ItemsCollected = new List<ItemData>();
         }
 
         public void SetCollectedItem(string ItemName, bool WriteToDisk) {
@@ -166,6 +173,17 @@ namespace TunicRandomizer {
             }
         }
 
+        public void PopulateTrackerForAP() {
+            if (IsArchipelago()) {
+                for (int i = 0; i < Archipelago.instance.integration.session.Items.AllItemsReceived.Count; i++) {
+                    if (SaveFile.GetInt($"randomizer processed item index {i}") == 1) {
+                        SetCollectedItem(Archipelago.instance.integration.session.Items.AllItemsReceived[i].ItemName, false);
+                    }
+                }
+                SaveTrackerFile();
+            }
+        }
+
         public static void SaveTrackerFile() {
             if (File.Exists(TunicRandomizer.ItemTrackerPath)) {
                 File.Delete(TunicRandomizer.ItemTrackerPath);
@@ -184,9 +202,9 @@ namespace TunicRandomizer {
 
             if (IsArchipelago()) {
                 foreach (string Key in ItemLookup.ItemList.Keys) {
-                    ArchipelagoItem Item = ItemLookup.ItemList[Key];
+                    ItemInfo Item = ItemLookup.ItemList[Key];
 
-                    string Spoiler = $"\t{((Locations.CheckedLocations[Key] || SaveFile.GetInt($"randomizer picked up {Key}") == 1 || (TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Key} was collected") == 1)) ? "x" : "-")} {Locations.LocationIdToDescription[Key]}: {Item.ItemName} ({Archipelago.instance.GetPlayerName(Item.Player)})";
+                    string Spoiler = $"\t{((Locations.CheckedLocations[Key] || SaveFile.GetInt($"randomizer picked up {Key}") == 1 || (TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Key} was collected") == 1)) ? "x" : "-")} {Locations.LocationIdToDescription[Key]}: {Item.ItemName} ({Item.Player.Name})";
 
                     SpoilerLog[Locations.VanillaLocations[Key].Location.SceneName].Add(Spoiler);
                 }
@@ -200,8 +218,7 @@ namespace TunicRandomizer {
                 }
             }
             List<string> SpoilerLogLines = new List<string>() {
-                "Seed: " + seed,
-                "Seed Paste: " + TunicRandomizer.Settings.GetSettingsString(),
+                IsSinglePlayer() ? $"Seed + Settings: {TunicRandomizer.Settings.GetSettingsString()}" : $"Seed: {seed}",
                 "\nLines that start with 'x' instead of '-' represent items that have been collected\n",
             };
             if (IsArchipelago()) {
@@ -210,9 +227,8 @@ namespace TunicRandomizer {
                 if(MajorItem == "Gold Questagon") { continue; }
                     if(Locations.MajorItemLocations.ContainsKey(MajorItem) && Locations.MajorItemLocations[MajorItem].Count > 0) {
                         foreach (ArchipelagoHint apHint in Locations.MajorItemLocations[MajorItem]) {
-
                             bool HasItem = false;
-                            if (Archipelago.instance.integration.session.Locations.AllLocationsChecked.Contains(Archipelago.instance.integration.session.Locations.GetLocationIdFromName(Archipelago.instance.GetPlayerGame((int)apHint.Player), apHint.Location))) { 
+                            if (Archipelago.instance.integration.session.Items.AllItemsReceived.Any(itemInfo => itemInfo.LocationName == apHint.Location && itemInfo.Player == (int)apHint.Player)) {
                                 HasItem = true;
                             }
                             string Spoiler = $"\t{(HasItem ? "x" : "-")} {MajorItem}: {apHint.Location} ({Archipelago.instance.GetPlayerName((int)apHint.Player)}'s World)";
@@ -228,7 +244,16 @@ namespace TunicRandomizer {
                 foreach (string MajorItem in ItemLookup.LegacyMajorItems) {
                     foreach (Check Check in ItemRandomizer.FindAllRandomizedItemsByName(MajorItem)) {
                         ItemData ItemData = ItemLookup.GetItemDataFromCheck(Check);
-                        string Key = $"{Check.Location.LocationId} [{Check.Location.SceneName}]";
+                        string Key = Check.CheckId;
+                        string Spoiler = $"\t{(Locations.CheckedLocations[Key] ? "x" : "-")} {ItemData.Name}: {Locations.SceneNamesForSpoilerLog[Check.Location.SceneName]} - {Locations.LocationIdToDescription[Key]}";
+                        SpoilerLogLines.Add(Spoiler);
+                    }
+                }
+                if (SaveFile.GetInt(SaveFlags.LadderRandoEnabled) == 1) {
+                    foreach(string LadderItem in ItemLookup.Items.Where(item => item.Value.Type == ItemTypes.LADDER).Select(item => item.Value.Name)) {
+                        Check Check = ItemRandomizer.FindRandomizedItemByName(LadderItem);
+                        ItemData ItemData = ItemLookup.GetItemDataFromCheck(Check);
+                        string Key = Check.CheckId;
                         string Spoiler = $"\t{(Locations.CheckedLocations[Key] ? "x" : "-")} {ItemData.Name}: {Locations.SceneNamesForSpoilerLog[Check.Location.SceneName]} - {Locations.LocationIdToDescription[Key]}";
                         SpoilerLogLines.Add(Spoiler);
                     }
@@ -268,7 +293,7 @@ namespace TunicRandomizer {
                 File.Delete(TunicRandomizer.SpoilerLogPath);
                 File.WriteAllLines(TunicRandomizer.SpoilerLogPath, SpoilerLogLines);
             }
-            Logger.LogInfo("Wrote spoiler log to " + TunicRandomizer.SpoilerLogPath);
+            TunicLogger.LogInfo("Wrote spoiler log to " + TunicRandomizer.SpoilerLogPath);
         }
 
         private static List<string> GetMysterySeedSettingsForSpoilerLog() {
@@ -282,6 +307,7 @@ namespace TunicRandomizer {
                 $"\t- Keys Behind Bosses: {SaveFile.GetInt(KeysBehindBosses) == 1}",
                 $"\t- Start with Sword: {SaveFile.GetInt("randomizer started with sword") == 1}",
                 $"\t- Shuffled Abilities: {SaveFile.GetInt(AbilityShuffle) == 1}",
+                $"\t- Shuffled Ladders: {SaveFile.GetInt(LadderRandoEnabled) == 1}",
                 $"\t- Entrance Randomizer: {SaveFile.GetInt(EntranceRando) == 1}",
                 $"\t- Alternate Logic: {SaveFile.GetInt("randomizer alternate logic") == 1}",
                 SaveFile.GetInt(EntranceRando) == 1 ? $"\t- Entrance Randomizer (Fewer Shops): {SaveFile.GetInt("randomizer ER fixed shop") == 1}" : "",
@@ -291,6 +317,40 @@ namespace TunicRandomizer {
             };
             MysterySettings.RemoveAll(x => x == "");
             return MysterySettings;
+        }
+
+        public static string GetItemCountsByRegion() {
+            string title = $"\"- - - - - \"  rahnduhmIzur prawgrehs\"  - - - - -\"\n";
+            string displayText = title;
+            int TotalAreaChecks = 0;
+            int AreaChecksFound = 0;
+            foreach(string Area in Locations.MainAreasToSubAreas.Keys) {
+                TotalAreaChecks = 0;
+                AreaChecksFound = 0;
+                foreach (string SubArea in Locations.MainAreasToSubAreas[Area]) {
+                    TotalAreaChecks += Locations.VanillaLocations.Keys.Where(Check => Locations.VanillaLocations[Check].Location.SceneName == SubArea).Count();
+                    AreaChecksFound += Locations.VanillaLocations.Keys.Where(Check => Locations.VanillaLocations[Check].Location.SceneName == SubArea && (Locations.CheckedLocations[Check] || (IsArchipelago() && TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Check} was collected") == 1))).Count();
+                }
+                displayText += $"\"{(AreaChecksFound == TotalAreaChecks ? "<#eaa614>" : "<#ffffff>")}{Area.PadRight(26, '.')}{$"{AreaChecksFound}/{TotalAreaChecks}".PadLeft(7, '.')}\"\n";
+                if (Area == "Rooted Ziggurat") {
+                    displayText += "---" + title;
+                }
+            }
+            int TotalChecksFound = Locations.VanillaLocations.Keys.Where(Check => Locations.CheckedLocations[Check] || (IsArchipelago() && TunicRandomizer.Settings.CollectReflectsInWorld && SaveFile.GetInt($"randomizer {Check} was collected") == 1)).Count();
+            int TotalChecks = Locations.VanillaLocations.Count;
+            displayText += $"\"{(TotalChecksFound == TotalChecks ? "<#eaa614>" : "<#ffffff>")}{"Total".PadRight(26, '.')}{$"{TotalChecksFound}/{TotalChecks}".PadLeft(7, '.')}\"";
+            if (TotalChecksFound == TotalChecks) {
+                displayText += "---\"<#eaa614>- - - - - -  302/302  - - - - - -\"\n\n    ";
+                int i = 0;
+                foreach(string s in WaveSpell.CustomInputs.Select(input => $"[arrow_{input.ToString().ToLower()}]")) {
+                    displayText += $"  <#eaa614>{s}  ";
+                    i++;
+                    if (i % 6 == 0 && i != 30) {
+                        displayText += "\n    ";
+                    }
+                }
+            }
+            return displayText;
         }
     }
 }

@@ -9,18 +9,14 @@ namespace TunicRandomizer {
     public struct Location {
         public string LocationId;
         public string Position;
-        public List<Dictionary<string, int>> RequiredItems;
-        public List<Dictionary<string, int>> RequiredItemsDoors;
+        public List<Dictionary<string, int>> Requirements;
         public int SceneId;
         public string SceneName;
 
         public bool reachable(Dictionary<string, int> inventory) {
             List<Dictionary<string, int>> itemsRequired;
-            if (SaveFile.GetInt("randomizer entrance rando enabled") == 1) {
-                itemsRequired = this.RequiredItemsDoors;
-            } else {
-                itemsRequired = this.RequiredItems;
-            }
+            
+            itemsRequired = this.Requirements;
 
             //if there are no requirements, the location is reachable
             if (itemsRequired.Count == 0) {
@@ -44,11 +40,11 @@ namespace TunicRandomizer {
                 //check if this requirement is fully met, otherwise move to the next requirement
                 int met = 0;
                 foreach (string item in req.Keys) {
-                    //Logger.LogInfo(item);
+                    //TunicLogger.LogInfo(item);
                     if (!inventory.ContainsKey(item)) {
                         if (ItemRandomizer.testBool) {
-                            TunicRandomizer.Logger.LogInfo("LocationID is " + this.LocationId);
-                            TunicRandomizer.Logger.LogInfo("inventory does not contain " + item);
+                            TunicLogger.LogInfo("LocationID is " + this.LocationId);
+                            TunicLogger.LogInfo("inventory does not contain " + item);
                         }
                         break;
                     } else if (inventory[item] >= req[item]) {
@@ -61,7 +57,7 @@ namespace TunicRandomizer {
             }
             //if no requirements are met, the location isn't reachable
             if (ItemRandomizer.testBool) {
-                TunicRandomizer.Logger.LogInfo("No requirements met for " + this.LocationId + ", returning false");
+                TunicLogger.LogInfo("No requirements met for " + this.LocationId + ", returning false");
             }
             return false;
         }
@@ -74,6 +70,9 @@ namespace TunicRandomizer {
     public class Check {
         public Location Location;
         public Reward Reward;
+        public string CheckId {
+            get => $"{Location.LocationId} [{Location.SceneName}]";
+        }
 
         public Check() { }
 

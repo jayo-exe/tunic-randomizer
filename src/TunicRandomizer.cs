@@ -5,12 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using BepInEx;
-using BepInEx.Logging;
-using Il2CppSystem;
 using BepInEx.IL2CPP;
 using UnityEngine;
 using HarmonyLib;
-using Archipelago;
 using Newtonsoft.Json;
 using UnhollowerRuntimeLib;
 using Newtonsoft.Json.Bson;
@@ -18,12 +15,12 @@ using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using JayoVNyan;
 
+
 namespace TunicRandomizer {
 
     [BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
     public class TunicRandomizer : BasePlugin {
 
-        public static ManualLogSource Logger;
         public static RandomizerSettings Settings = new RandomizerSettings();
         public static string SettingsPath = Application.persistentDataPath + "/Randomizer/Settings.json";
         public static string ItemTrackerPath = Application.persistentDataPath + "/Randomizer/ItemTracker.json";
@@ -32,7 +29,6 @@ namespace TunicRandomizer {
 
         public override void Load() {
             TunicLogger.SetLogger(Log);
-            Logger = Log;
             TunicLogger.LogInfo(PluginInfo.NAME + " v" + PluginInfo.VERSION + " loaded!");
 
             Application.runInBackground = true;
@@ -43,12 +39,24 @@ namespace TunicRandomizer {
             ClassInjector.RegisterTypeInIl2Cpp<WaveSpell>();
             ClassInjector.RegisterTypeInIl2Cpp<JayoSpell>();
             ClassInjector.RegisterTypeInIl2Cpp<EntranceSeekerSpell>();
+            ClassInjector.RegisterTypeInIl2Cpp<DDRSpell>();
             ClassInjector.RegisterTypeInIl2Cpp<VisibleByNotHavingItem>();
             ClassInjector.RegisterTypeInIl2Cpp<HeroGraveToggle>();
             ClassInjector.RegisterTypeInIl2Cpp<MailboxFlag>();
             ClassInjector.RegisterTypeInIl2Cpp<ToggleLadderByLadderItem>();
             ClassInjector.RegisterTypeInIl2Cpp<UnderConstruction>();
+            ClassInjector.RegisterTypeInIl2Cpp<HexagonQuestCutscene>();
+            ClassInjector.RegisterTypeInIl2Cpp<ToggleObjectByFuse>();
+            ClassInjector.RegisterTypeInIl2Cpp<BossEnemy>();
+            ClassInjector.RegisterTypeInIl2Cpp<FleemerQuartet>();
 
+            ClassInjector.RegisterTypeInIl2Cpp<MusicShuffler>();
+            UnityEngine.Object.DontDestroyOnLoad(new GameObject("music shuffler", new Il2CppSystem.Type[]
+            {
+                Il2CppType.Of<MusicShuffler>()
+            }) {
+                hideFlags = HideFlags.HideAndDontSave
+            });
             ClassInjector.RegisterTypeInIl2Cpp<PaletteEditor>();
             UnityEngine.Object.DontDestroyOnLoad(new GameObject("palette editor gui", new Il2CppSystem.Type[]
             {
@@ -87,9 +95,23 @@ namespace TunicRandomizer {
 
             Harmony.Patch(AccessTools.Method(typeof(MagicSpell), "CheckInput"), null, new HarmonyMethod(AccessTools.Method(typeof(WaveSpell), "MagicSpell_CheckInput_PostfixPatch")));
 
+            Harmony.Patch(AccessTools.Method(typeof(DollSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(RealestSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+            
+            Harmony.Patch(AccessTools.Method(typeof(RealestSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(FairySpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(BHMSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(HealSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(CheapIceboltSpell), "SpellEffect"), null, new HarmonyMethod(AccessTools.Method(typeof(DDRSpell), "MagicSpell_SpellEffect_PostfixPatch")));
+
             Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter._Die_d__481), "MoveNext"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_Die_MoveNext_PostfixPatch")));
 
-            Harmony.Patch(AccessTools.Method(typeof(Monster), "IDamageable_ReceiveDamage"), new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "Monster_IDamageable_ReceiveDamage_PrefixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(Monster), "IDamageable_ReceiveDamage"), new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "Monster_IDamageable_ReceiveDamage_PrefixPatch")));
 
             Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "Die"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_Die_PostfixPatch")));
             Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "onFreeze"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_onFreeze_PostfixPatch")));
@@ -145,6 +167,8 @@ namespace TunicRandomizer {
 
             Harmony.Patch(AccessTools.PropertyGetter(typeof(Item), "ShouldShowInInventory"), new HarmonyMethod(AccessTools.Method(typeof(CustomItemBehaviors), "Item_shouldShowInInventory_GetterPatch")));
 
+            Harmony.Patch(AccessTools.Method(typeof(Cheats), "giveLotsOfItems"), null, new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "Cheats_giveLotsOfItems_PostfixPatch")));
+
             // Custom Item Behaviors
             Harmony.Patch(AccessTools.Method(typeof(BoneItemBehaviour), "onActionButtonDown"), new HarmonyMethod(AccessTools.Method(typeof(CustomItemBehaviors), "BoneItemBehavior_onActionButtonDown_PrefixPatch")));
 
@@ -167,7 +191,13 @@ namespace TunicRandomizer {
             Harmony.Patch(AccessTools.Method(typeof(TunicKnightVoid), "onFlinch"), new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "TunicKnightVoid_onFlinch_PrefixPatch")));
 
             Harmony.Patch(AccessTools.Method(typeof(Monster._Die_d__77), "MoveNext"), new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "Monster_Die_MoveNext_PrefixPatch")), new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "Monster_Die_MoveNext_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(Librarian), "BehaviourUpdate"), null, new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "Librarian_BehaviourUpdate_PostfixPatch")));
             
+            Harmony.Patch(AccessTools.Method(typeof(Monster), "OnTouchKillbox"), new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "Monster_OnTouchKillbox_PrefixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(CathedralGauntletManager), "Spawn"), null, new HarmonyMethod(AccessTools.Method(typeof(EnemyRandomizer), "CathedralGauntletManager_Spawn_PostfixPatch")));
+
             // Finish Line
             Harmony.Patch(AccessTools.Method(typeof(SpeedrunFinishlineDisplay), "showFinishline"), new HarmonyMethod(AccessTools.Method(typeof(SpeedrunFinishlineDisplayPatches), "SpeedrunFinishlineDisplay_showFinishline_PrefixPatch")), new HarmonyMethod(AccessTools.Method(typeof(SpeedrunFinishlineDisplayPatches), "SpeedrunFinishlineDisplay_showFinishline_PostfixPatch")));
 
@@ -232,6 +262,10 @@ namespace TunicRandomizer {
             
             Harmony.Patch(AccessTools.Method(typeof(ConduitData), "IsFuseClosedByID"), new HarmonyMethod(AccessTools.Method(typeof(InteractionPatches), "ConduitData_IsFuseClosedByID_PrefixPatch")));
 
+            Harmony.Patch(AccessTools.Method(typeof(PlayMusicOnLoad), "Start"), null, new HarmonyMethod(AccessTools.Method(typeof(MusicShuffler), "PlayMusicOnLoad_Start_PostfixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(MusicManager), "SetParam"), null, new HarmonyMethod(AccessTools.Method(typeof(MusicShuffler), "MusicManager_PlayCuedTrack_PostfixPatch")));
+            
         }
     }
 }

@@ -8,7 +8,7 @@ using JayoVNyan;
 
 namespace TunicRandomizer {
     public class SwordProgression {
-        private static ManualLogSource Logger = TunicRandomizer.Logger;
+        
         public static void UpgradeSword(int SwordLevel) {
             
             SaveFile.SetInt(SwordProgressionLevel, SwordLevel);
@@ -107,14 +107,12 @@ namespace TunicRandomizer {
                 Sword.transform.localRotation = Quaternion.identity;
                 Sword.transform.localPosition = Vector3.zero;
             } else {
-                Logger.LogError("Could not find sword object to replace with Sword Lvl 3!");
+                TunicLogger.LogError("Could not find sword object to replace with Sword Lvl 3!");
             }
         }
 
         public static void EnableThirdSwordFromExisting(GameObject SwordProxy) {
 
-/*            string SwordPath = "_Fox(Clone)/Fox/root/pelvis/chest/arm_upper.R/arm_lower.R/hand.R/sword_proxy/";
-            GameObject SwordProxy = GameObject.Find(SwordPath);*/
             if (SwordProxy != null) {
                 if (SwordProxy.GetComponent<MeshFilter>() != null && SwordProxy.GetComponent<MeshRenderer>() != null) {
                     GameObject.Destroy(SwordProxy.GetComponent<MeshFilter>());
@@ -138,7 +136,7 @@ namespace TunicRandomizer {
                 Sword.transform.localRotation = new Quaternion(0.7071f, 0f, 0f, -0.7071f);
                 Sword.transform.localPosition = Vector3.zero;
             } else {
-                Logger.LogError("Could not find sword object to replace with Sword Lvl 4!");
+                TunicLogger.LogError("Could not find sword object to replace with Sword Lvl 4!");
             }
         }
 

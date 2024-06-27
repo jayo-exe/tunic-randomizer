@@ -10,7 +10,7 @@ For discussion around the Archipelago side of things, please visit the dedicated
 
 ## Installation
 - Must use a compatible PC version of TUNIC on the latest update. The mod has been tested on Steam and PC Game Pass versions, but should realistically work on any PC version (including Steam Deck).
-    - If playing on Steam Deck, first follow this guide to [setting up BepInEx on Steam Deck via Proton](https://docs.bepinex.dev/articles/advanced/proton_wine.html).
+    - If playing on Steam Deck or Linux, first follow this guide to [setting up BepInEx via Proton/Wine](https://docs.bepinex.dev/articles/advanced/proton_wine.html).
 
 - Download the appropriate IL2CPP release of [BepInEx 6](https://github.com/BepInEx/BepInEx/releases/download/v6.0.0-pre.1/BepInEx_UnityIL2CPP_x64_6.0.0-pre.1.zip).
 
@@ -64,6 +64,7 @@ For discussion around the Archipelago side of things, please visit the dedicated
     - There is an [entrance tracker](https://scipiowright.gitlab.io/tunic-tracker/), created by ScipioWright.
 - Regarding Hints:
   - The Mailbox will give a "First Steps" hint, pointing you in the direction of a useful/progression item that can be reached from the start of the game.
+    - If playing with ladder shuffle, this hint will still let you know where a useful item is, but it may require you to find some ladders first to get to it and thus won't always be immediately available.
   - The Hero's Graves in the Swamp, Monastery, and Library will hint the location of the three Hexagon keys.
   - The Hero's Graves in East Forest, West Garden, and the Eastern Vault Fortress hint towards a major progression item, such as the Magic Orb, Lantern, Magic Wand, Magic Dagger, and/or the Prayer/Holy Cross pages if abilities are shuffled.
   - The statue in the Sealed Temple will always hint the general location of the Hero's Laurels.
@@ -92,10 +93,16 @@ With the exception of the Logic settings (which are determined in your Archipela
   - Locks the ability to use Prayer, most Holy Cross codes*, and the Icebolt combo technique until the respective manual page for each ability is found.
   - Prayer is unlocked by Page 24, Holy Cross is unlocked by Page 43, and the Icebolt technique is unlocked by Page 53. If playing Hexagon Quest, abilities are unlocked when reaching 25%, 50%, and 75% of the required amount of Gold Hexagons.
   - *This option only locks Holy Cross codes that block access to checks in the randomizer. The free bomb codes and other player-facing codes like Big Head Mode, Sunglasses, Fairy Seeker, etc. are still usable from the start.
+- Shuffle Ladders
+  - Turns several ladders in the game into items that must be found before they can be climbed on, blocking off several paths early on and adding more layers of progression.
+  - "Ladders were a mistake." —Andrew Shouldice
 - Entrance Randomizer
   - Shuffles all the connections between doors, teleporters, portals, and more. Where will the fox end up?
 - Entrance Randomizer: Fewer Shop Entrances
   - Reduces the amount of possible shops that can be found, and places a guaranteed shop entrance at the Overworld Windmill entrance.
+- Fool Traps
+  - Enables fool traps, which replace low-value money rewards when enabled and apply damage/other negative effects to the player. Turning the setting up increases the amount of traps in the item pool.
+  - For Single Player seeds, this option can be changed mid-run by changing the value and reloading the save file. For Archipelago games, this is a yaml option and cannot be changed after the game starts.
 - Hero Laurels Location
   - Place the Laurels at a predetermined location, currently the options are the 6 coin reward, 10 coin reward, or 10 fairy reward.
 - Lanternless Logic
@@ -125,6 +132,10 @@ With the exception of the Logic settings (which are determined in your Archipela
 ### General
 - Easier Heir Fight
   - Attacks deal additional damage to The Heir based on the total number of checks found.
+- Clear Early Bushes
+  - Removes a number of bushes from the Overworld when enabled, allowing free access to the East and West sides of the map.
+- Enable All Checkpoints
+  - Allows all checkpoints (save statues) to be used regardless of if they are powered or not.
 - Cheaper Shop Items
   - Reduces the cost of the four randomized Shop items to 300 bits each.
 - Bonus Upgrades
@@ -136,15 +147,6 @@ With the exception of the Logic settings (which are determined in your Archipela
   - Turns off the item/page popups when receiving items.
 - Skip Upgrade Animations
   - Skips the animation that plays when upgrading stats.
-- Fool Traps
-  - Enables fool traps, which replace low-value money rewards when enabled and apply damage/other negative effects to the player. Turning the setting up increases the amount of traps in the item pool.
-  - For Single Player seeds, this option can be changed mid-run by changing the value and reloading the save file. For Archipelago games, this is a yaml option and cannot be changed after the game starts.
-- ???
-  - !esirprus a rof no nruT
-- More Skulls
-  - Does exactly what it says on the tin.
-- Arachnophobia Mode
-  - Turns the spiders and another mulit-legged enemy into...something else.
 ### Enemy Randomization 
 - Enemy Randomizer
   - Randomly swaps out enemies with new ones when you load into a scene. You may even see some enemies you've never seen before!
@@ -154,6 +156,12 @@ With the exception of the Logic settings (which are determined in your Archipela
   - Enemies are randomized based on the difficulty of the original enemy being swapped out.
 - Seeded Enemies
   - Enemy spawns will remain consistent everytime an area is reloaded.
+- Limit Boss Spawns
+  - Limits the number of boss-type enemies that can spawn in the enemy randomizer.
+  - Turn off at own risk! Too many bosses can lag the game in certain areas.
+- Enemy Toggles
+  - Allows you to customize the enemy randomizer experience by choosing which enemies you want to appear.
+  - Turn on the `Use Enemy Toggles` option and then use the Enemy Toggle List to make your choices.
 ### Fox Customization 🦊
 - Random Fox Colors
   - Fox colors will randomize on every load/scene transition.
@@ -163,6 +171,13 @@ With the exception of the Logic settings (which are determined in your Archipela
   - Allows you to customize the colors of your fox with more options than what the base game offers, and save it as a custom texture for future use.
 - Custom Fox Texture
   - When enabled, will always apply the saved custom texture to the fox. The custom texture can be found under AppData in the same folder as the Spoiler log and Item Tracker file.
+### Music Shuffler
+- Music Shuffle
+  - Plays a random music track when everytime you enter an area.
+- Seeded Music
+  - Plays a set track per scene.
+- Music Toggles
+  - Allows you to customize which tracks play when the shuffler is turned on.
 ### Race Mode Settings
 - Race Mode
   - An option to help facilitate ranomizer races more easily. Disables the spoiler log, and enables the options below to be used.
@@ -176,6 +191,19 @@ With the exception of the Logic settings (which are determined in your Archipela
   - Prevents the Ladder Storage glitch from being used.
 - Disable Upgrade Stealing
   - Prevents the Upgrade Stealing glitch from being used.
+### Other Settings
+- ???
+  - !esirprus a rof no nruT
+- More Skulls
+  - Does exactly what it says on the tin.
+- Arachnophobia Mode
+  - Turns the spiders and another mulit-legged enemy into...something else.
+- Holy Cross DDR
+  - Spawns DDR-style arrows when you use the holy cross to help visualize your inputs.
+- Bigger Head Mode
+  - Beeg
+- Tinier Fox Mode
+  - Smol
   
 ## Credits
 - Glace and RisingStar111 for helping research how to mod this game, and Jabberrock for creating an initial Archipelago integration.

@@ -7,7 +7,6 @@ using static TunicRandomizer.SaveFlags;
 
 namespace TunicRandomizer {
     public class CustomItemBehaviors {
-        public static ManualLogSource Logger = TunicRandomizer.Logger;
 
         public static bool CanTakeGoldenHit = false;
         public static bool CanSwingGoldenSword = false;
@@ -61,6 +60,10 @@ namespace TunicRandomizer {
             StateVariable GraveHintStateVar = ScriptableObject.CreateInstance<StateVariable>();
             GraveHintStateVar.name = "randomizer got all 6 grave items";
             StateVariable.stateVariableList.Add(GraveHintStateVar);
+
+            StateVariable CryptSecretStateVar = ScriptableObject.CreateInstance<StateVariable>();
+            CryptSecretStateVar.name = "randomizer crypt secret filigree door opened";
+            StateVariable.stateVariableList.Add(CryptSecretStateVar);
 
             Inventory.itemList.Add(GoldQuestagon);
             Inventory.itemList.Add(DathStone);

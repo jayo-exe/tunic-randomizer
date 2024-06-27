@@ -19,20 +19,22 @@ using System.IO;
 using System.Runtime.InteropServices.ComTypes;
 using Archipelago.MultiClient.Net.Helpers;
 using static TunicRandomizer.SaveFlags;
+using Archipelago.MultiClient.Net.Exceptions;
+using static TunicRandomizer.TunicPortals;
 
 namespace TunicRandomizer {
     public class ArchipelagoIntegration {
-
-        private ManualLogSource Logger = TunicRandomizer.Logger;
         
-        public bool connected;
+        public bool connected {
+            get { return session != null ? session.Socket.Connected : false; }
+        }
 
         public ArchipelagoSession session;
         private IEnumerator<bool> incomingItemHandler;
         private IEnumerator<bool> outgoingItemHandler;
         private IEnumerator<bool> checkItemsReceived;
-        private ConcurrentQueue<(NetworkItem NetworkItem, int index)> incomingItems;
-        private ConcurrentQueue<NetworkItem> outgoingItems;
+        private ConcurrentQueue<(ItemInfo ItemInfo, int index)> incomingItems;
+        private ConcurrentQueue<ItemInfo> outgoingItems;
         private DeathLinkService deathLinkService;
         public Dictionary<string, object> slotData;
         public bool sentCompletion = false;
@@ -74,29 +76,28 @@ namespace TunicRandomizer {
 
         public void TryConnect() {
             
+            if (connected && TunicRandomizer.Settings.ConnectionSettings.Player == session.Players.GetPlayerName(session.ConnectionInfo.Slot)) {
+                return;
+            }
+
             TryDisconnect();
 
             RandomizerSettings settings = JsonConvert.DeserializeObject<RandomizerSettings>(File.ReadAllText(TunicRandomizer.SettingsPath));
             TunicRandomizer.Settings.ConnectionSettings = settings.ConnectionSettings;
-
             LoginResult LoginResult;
-            if (connected) {
-                return;
-            }
+
             if (session == null) {
                 try {
                     session = ArchipelagoSessionFactory.CreateSession(TunicRandomizer.Settings.ConnectionSettings.Hostname, int.Parse(TunicRandomizer.Settings.ConnectionSettings.Port));
                 } catch (Exception e) {
-                    Logger.LogInfo("Failed to create archipelago session!");
+                    TunicLogger.LogInfo("Failed to create archipelago session!");
                 }
             }
             incomingItemHandler = IncomingItemHandler();
             outgoingItemHandler = OutgoingItemHandler();
             checkItemsReceived = CheckItemsReceived();
-            incomingItems = new ConcurrentQueue<(NetworkItem NetworkItem, int index)>();
-            outgoingItems = new ConcurrentQueue<NetworkItem>();
-
-            TunicRandomizer.Tracker = new ItemTracker();
+            incomingItems = new ConcurrentQueue<(ItemInfo ItemInfo, int index)>();
+            outgoingItems = new ConcurrentQueue<ItemInfo>();
 
             try {
                 LoginResult = session.TryConnectAndLogin("TUNIC", TunicRandomizer.Settings.ConnectionSettings.Player, ItemsHandlingFlags.AllItems, requestSlotData: true, password: TunicRandomizer.Settings.ConnectionSettings.Password);
@@ -108,14 +109,13 @@ namespace TunicRandomizer {
 
                 slotData = LoginSuccess.SlotData;
 
-                connected = true;
-                Logger.LogInfo("Successfully connected to Archipelago Multiworld server!");
+                TunicLogger.LogInfo("Successfully connected to Archipelago Multiworld server!");
 
                 deathLinkService = session.CreateDeathLinkService();
 
                 deathLinkService.OnDeathLinkReceived += (deathLinkObject) => {
                     if (SceneManager.GetActiveScene().name != "TitleScreen") {
-                        Logger.LogInfo("Death link received");
+                        TunicLogger.LogInfo("Death link received");
                         PlayerCharacterPatches.DeathLinkMessage = deathLinkObject.Cause == null ? $"\"{deathLinkObject.Source} died and took you with them.\"": $"\"{deathLinkObject.Cause}\"";
                         PlayerCharacterPatches.DiedToDeathLink = true;
                     }
@@ -129,15 +129,15 @@ namespace TunicRandomizer {
 
             } else {
                 LoginFailure loginFailure = (LoginFailure)LoginResult;
-                Logger.LogInfo("Error connecting to Archipelago:");
+                TunicLogger.LogInfo("Error connecting to Archipelago:");
                 Notifications.Show($"\"Failed to connect to Archipelago!\"", $"\"Check your settings and/or log output.\"");
                 foreach (string Error in loginFailure.Errors) {
-                    Logger.LogInfo(Error);
+                    TunicLogger.LogInfo(Error);
                 }
                 foreach (ConnectionRefusedError Error in loginFailure.ErrorCodes) {
-                    Logger.LogInfo(Error);
+                    TunicLogger.LogInfo(Error.ToString());
                 }
-                connected = false;
+                TryDisconnect();
             }
         }
 
@@ -150,31 +150,29 @@ namespace TunicRandomizer {
                     session = null;
                 }
 
-                connected = false;
                 incomingItemHandler = null;
                 outgoingItemHandler = null;
                 checkItemsReceived = null;
-                incomingItems = new ConcurrentQueue<(NetworkItem NetworkItem, int ItemIndex)>();
-                outgoingItems = new ConcurrentQueue<NetworkItem>();
+                incomingItems = new ConcurrentQueue<(ItemInfo ItemInfo, int ItemIndex)>();
+                outgoingItems = new ConcurrentQueue<ItemInfo>();
                 deathLinkService = null;
                 slotData = null;
                 ItemIndex = 0;
                 Locations.CheckedLocations.Clear();
                 ItemLookup.ItemList.Clear();
 
-                Logger.LogInfo("Disconnected from Archipelago");
+                TunicLogger.LogInfo("Disconnected from Archipelago");
             } catch (Exception e) {
-                Logger.LogInfo("Encountered an error disconnecting from Archipelago!");
+                TunicLogger.LogInfo("Encountered an error disconnecting from Archipelago!");
             }
         }
 
         private IEnumerator<bool> CheckItemsReceived() {
             while (connected) {
                 if (session.Items.AllItemsReceived.Count > ItemIndex) {
-                    NetworkItem Item = session.Items.AllItemsReceived[ItemIndex];
-                    string ItemReceivedName = session.Items.GetItemName(Item.Item);
-                    Logger.LogInfo("Placing item " + ItemReceivedName + " with index " + ItemIndex + " in queue.");
-                    incomingItems.Enqueue((Item, ItemIndex));
+                    ItemInfo ItemInfo = session.Items.AllItemsReceived[ItemIndex];
+                    TunicLogger.LogInfo("Placing item " + ItemInfo.ItemName + " with index " + ItemIndex + " in queue.");
+                    incomingItems.Enqueue((ItemInfo, ItemIndex));
                     ItemIndex++;
                     yield return true;
                 } else {
@@ -192,14 +190,13 @@ namespace TunicRandomizer {
                     continue;
                 }
 
-                var networkItem = pendingItem.NetworkItem;
-                var itemName = session.Items.GetItemName(networkItem.Item);
-                var itemDisplayName = itemName + " (" + networkItem.Item + ") at index " + pendingItem.index;
+                var itemInfo = pendingItem.ItemInfo;
+                var itemName = itemInfo.ItemName;
+                var itemDisplayName = itemName + " (" + itemInfo.ItemId + ") at index " + pendingItem.index;
 
                 if (SaveFile.GetInt($"randomizer processed item index {pendingItem.index}") == 1) {
                     incomingItems.TryDequeue(out _);
-                    TunicRandomizer.Tracker.SetCollectedItem(itemName, false);
-                    Logger.LogInfo("Skipping item " + itemName + " at index " + pendingItem.index + " as it has already been processed.");
+                    TunicLogger.LogInfo("Skipping item " + itemName + " at index " + pendingItem.index + " as it has already been processed.");
                     yield return true;
                     continue;
                 }
@@ -209,10 +206,10 @@ namespace TunicRandomizer {
                     yield return true;
                 }
 
-                var handleResult = ItemPatches.GiveItem(itemName, networkItem);
+                var handleResult = ItemPatches.GiveItem(itemName, itemInfo);
                 switch (handleResult) {
                     case ItemPatches.ItemResult.Success:
-                        Logger.LogInfo("Received " + itemDisplayName + " from " + session.Players.GetPlayerName(networkItem.Player));
+                        TunicLogger.LogInfo("Received " + itemDisplayName + " from " + session.Players.GetPlayerName(itemInfo.Player) + " at " + itemInfo.LocationName);
 
                         incomingItems.TryDequeue(out _);
                         SaveFile.SetInt($"randomizer processed item index {pendingItem.index}", 1);
@@ -230,18 +227,18 @@ namespace TunicRandomizer {
 
                         // Pause before processing next item
                         DateTime postInteractionStart = DateTime.Now;
-                        while (DateTime.Now < postInteractionStart + TimeSpan.FromSeconds(3.5)) {
+                        while (DateTime.Now < postInteractionStart + TimeSpan.FromSeconds(incomingItems.Count > 10 ? 1f : 2f)) {
                             yield return true;
                         }
 
                         break;
 
                     case ItemPatches.ItemResult.TemporaryFailure:
-                        Logger.LogDebug("Player is busy, will retry processing item: " + itemDisplayName);
+                        TunicLogger.LogDebug("Player is busy, will retry processing item: " + itemDisplayName);
                         break;
 
                     case ItemPatches.ItemResult.PermanentFailure:
-                        Logger.LogWarning("Failed to process item " + itemDisplayName);
+                        TunicLogger.LogWarning("Failed to process item " + itemDisplayName);
                         incomingItems.TryDequeue(out _);
                         SaveFile.SetInt($"randomizer processed item index {pendingItem.index}", 1);
                         break;
@@ -253,36 +250,35 @@ namespace TunicRandomizer {
 
         private IEnumerator<bool> OutgoingItemHandler() {
             while (connected) {
-                if (!outgoingItems.TryDequeue(out var networkItem)) {
+                if (!outgoingItems.TryDequeue(out var itemInfo)) {
                     yield return true;
                     continue;
                 }
 
-                var itemName = session.Items.GetItemName(networkItem.Item);
-                var location = session.Locations.GetLocationNameFromId(networkItem.Location);
-                var receiver = session.Players.GetPlayerName(networkItem.Player);
+                var itemName = itemInfo.ItemName;
+                var location = itemInfo.LocationName;
+                var receiver = itemInfo.Player.Name;
 
-                Logger.LogInfo("Sent " + itemName + " at " + location + " for " + receiver);
+                TunicLogger.LogInfo("Sent " + itemName + " at " + location + " to " + receiver);
 
-                if (networkItem.Player != session.ConnectionInfo.Slot) {
+                if (itemInfo.Player != session.ConnectionInfo.Slot) {
                     SaveFile.SetInt("archipelago items sent to other players", SaveFile.GetInt("archipelago items sent to other players")+1);
-                    Notifications.Show($"yoo sehnt  {(TextBuilderPatches.ItemNameToAbbreviation.ContainsKey(itemName) && Archipelago.instance.IsTunicPlayer(networkItem.Player) ? TextBuilderPatches.ItemNameToAbbreviation[itemName] : "[archipelago]")}  \"{itemName.Replace("_", " ")}\" too \"{receiver}!\"", $"hOp #A lIk it!");
+                    Notifications.Show($"yoo sehnt  {(TextBuilderPatches.ItemNameToAbbreviation.ContainsKey(itemName) && Archipelago.instance.IsTunicPlayer(itemInfo.Player) ? TextBuilderPatches.ItemNameToAbbreviation[itemName] : "[archipelago]")}  \"{itemName.Replace("_", " ")}\" too \"{receiver}!\"", $"hOp #A lIk it!");
                 }
                 
                 yield return true;
             }
         }
 
-        public void ActivateCheck(string LocationId) {
+        public void ActivateCheck(string LocationName) {
             var sceneName = SceneManager.GetActiveScene().name;
-            
-            if (LocationId != null) {
-                Logger.LogInfo("Checked location " + LocationId);
-                var location = session.Locations.GetLocationIdFromName(session.ConnectionInfo.Game, LocationId);
+            if (LocationName != null) {
+                TunicLogger.LogInfo("Checked location " + LocationName);
+                var location = session.Locations.GetLocationIdFromName(session.ConnectionInfo.Game, LocationName);
 
                 session.Locations.CompleteLocationChecks(location);
 
-                string GameObjectId = Locations.LocationDescriptionToId[LocationId];
+                string GameObjectId = Locations.LocationDescriptionToId[LocationName];
                 SaveFile.SetInt(ItemCollectedKey + GameObjectId, 1);
 
                 Locations.CheckedLocations[GameObjectId] = true;
@@ -298,53 +294,54 @@ namespace TunicRandomizer {
                 }
 
                 session.Locations.ScoutLocationsAsync(location)
-                    .ContinueWith(locationInfoPacket =>
-                        outgoingItems.Enqueue(locationInfoPacket.Result.Locations[0]));
+                .ContinueWith(locationInfoPacket => {
+                    foreach (ItemInfo ItemInfo in locationInfoPacket.Result.Values) {
+                        outgoingItems.Enqueue(ItemInfo);
+                    }
+                });
 
             } else {
-                Logger.LogWarning("Failed to get unique name for check " + LocationId);
-                Notifications.Show($"\"Unknown Check: {LocationId}\"", $"\"Please file a bug!\"");
+                TunicLogger.LogWarning("Failed to get unique name for check " + LocationName);
+                Notifications.Show($"\"Unknown Check: {LocationName}\"", $"\"Please file a bug!\"");
             }
         }
 
-        public void SendCompletion() { 
-            StatusUpdatePacket statusUpdatePacket = new StatusUpdatePacket();
-            statusUpdatePacket.Status = ArchipelagoClientState.ClientGoal;
-            session.Socket.SendPacket(statusUpdatePacket);
+        public void SendCompletion() {
+            session.SetGoalAchieved();
             UpdateDataStorage("Reached an Ending", true);
         }
 
         public void Release() {
             if (connected && sentCompletion && !sentRelease) {
-                session.Socket.SendPacket(new SayPacket() { Text = "!release" });
+                session.Say("!release");
                 sentRelease = true;
-                Logger.LogInfo("Released remaining checks.");
+                TunicLogger.LogInfo("Released remaining checks.");
             }
         }
 
         public void Collect() {
             if (connected && sentCompletion && !sentCollect) {
-                session.Socket.SendPacket(new SayPacket() { Text = "!collect" });
+                session.Say("!collect");
                 sentCollect = true;
-                Logger.LogInfo("Collected remaining items.");
+                TunicLogger.LogInfo("Collected remaining items.");
             }
         }
 
         public void EnableDeathLink() {
             if (deathLinkService == null) {
-                Logger.LogWarning("Cannot enable death link service as it is null.");
+                TunicLogger.LogWarning("Cannot enable death link service as it is null.");
             }
             
-            Logger.LogInfo("Enabled death link service");
+            TunicLogger.LogInfo("Enabled death link service");
             deathLinkService.EnableDeathLink();
         }
 
         public void DisableDeathLink() {
             if (deathLinkService == null) {
-                Logger.LogWarning("Cannot disable death link service as it is null.");
+                TunicLogger.LogWarning("Cannot disable death link service as it is null.");
             }
 
-            Logger.LogInfo("Disabled death link service");
+            TunicLogger.LogInfo("Disabled death link service");
             deathLinkService.DisableDeathLink();
         }
 
@@ -370,7 +367,7 @@ namespace TunicRandomizer {
 
         private void SetupDataStorage() {
             if (session != null) {
-                Logger.LogInfo("Initializing DataStorage values");
+                TunicLogger.LogInfo("Initializing DataStorage values");
                 // Map to Display
                 session.DataStorage[Scope.Slot, "Current Map"].Initialize("Overworld");
 
@@ -392,6 +389,16 @@ namespace TunicRandomizer {
                 session.DataStorage[Scope.Slot, "Granted Firebomb"].Initialize(false);
                 session.DataStorage[Scope.Slot, "Granted Icebomb"].Initialize(false);
 
+                if (slotData.ContainsKey("entrance_rando") && slotData["entrance_rando"].ToString() == "1") {
+                    foreach (KeyValuePair<string, Dictionary<string, List<TunicPortal>>> portalDict in RegionPortalsList.Where(dict => dict.Key != "Shop")) {
+                        foreach (KeyValuePair<string, List<TunicPortal>> portals in portalDict.Value) {
+                            foreach (TunicPortal portal in portals.Value) {
+                                TunicLogger.LogInfo("initializing datastorage value for portal: " + portalDict.Key + ", " + portal.Destination + portal.Tag);
+                                session.DataStorage[Scope.Slot, $"{portalDict.Key}, {portal.Destination}{portal.Tag}"].Initialize(false);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -407,7 +414,7 @@ namespace TunicRandomizer {
                 session.DataStorage[Scope.Slot, Key] = (string)Value;
             }
             if (Log) {
-                Logger.LogInfo("Setting DataStorage value \"" + Key + "\" to " + Value);
+                TunicLogger.LogInfo("Setting DataStorage value \"" + Key + "\" to " + Value);
             }
         }
 
@@ -421,11 +428,11 @@ namespace TunicRandomizer {
             }
 
             // Boss Info
-            UpdateDataStorage("Defeated Guard Captain", StateVariable.GetStateVariableByName("SV_Forest Boss Room_Skuladot redux Big").BoolValue, false);
-            UpdateDataStorage("Defeated Garden Knight", StateVariable.GetStateVariableByName("SV_Archipelagos Redux TUNIC Knight is Dead").BoolValue, false);
-            UpdateDataStorage("Defeated Siege Engine", StateVariable.GetStateVariableByName("SV_Fortress Arena_Spidertank Is Dead").BoolValue, false);
-            UpdateDataStorage("Defeated Librarian", StateVariable.GetStateVariableByName("Librarian Dead Forever").BoolValue, false);
-            UpdateDataStorage("Defeated Boss Scavenger", StateVariable.GetStateVariableByName("SV_ScavengerBossesDead").BoolValue, false);
+            UpdateDataStorage("Defeated Guard Captain", SaveFile.GetInt(EnemyRandomizer.CustomBossFlags[0]) == 1, false);
+            UpdateDataStorage("Defeated Garden Knight", SaveFile.GetInt(EnemyRandomizer.CustomBossFlags[1]) == 1, false);
+            UpdateDataStorage("Defeated Siege Engine", SaveFile.GetInt(EnemyRandomizer.CustomBossFlags[2]) == 1, false);
+            UpdateDataStorage("Defeated Librarian", SaveFile.GetInt(EnemyRandomizer.CustomBossFlags[3]) == 1, false);
+            UpdateDataStorage("Defeated Boss Scavenger", SaveFile.GetInt(EnemyRandomizer.CustomBossFlags[4]) == 1, false);
             UpdateDataStorage("Cleared Cathedral Gauntlet", StateVariable.GetStateVariableByName("SV_Cathedral Arena Mockup_Waves Done").BoolValue, false);
             UpdateDataStorage("Reached an Ending", SpeedrunData.gameComplete != 0, false);
 
@@ -437,7 +444,27 @@ namespace TunicRandomizer {
             UpdateDataStorage("Granted Firecracker", StateVariable.GetStateVariableByName("Granted Firecracker").BoolValue, false);
             UpdateDataStorage("Granted Firebomb", StateVariable.GetStateVariableByName("Granted Firebomb").BoolValue, false);
             UpdateDataStorage("Granted Icebomb", StateVariable.GetStateVariableByName("Granted Icebomb").BoolValue, false);
+
         }
 
+        public Dictionary<string, int> GetStartInventory() {
+            Dictionary<string, int> startInventory = new Dictionary<string, int>();
+            if (connected && session != null) {
+                // start inventory items have a location ID of -2, add them to a dict so we can use them for first steps
+                foreach (ItemInfo item in session.Items.AllItemsReceived) {
+                    if (item.LocationId == -2) {
+                        string itemName = item.ItemName;
+                        if (ItemLookup.Items.ContainsKey(itemName)) {
+                            ItemRandomizer.AddStringToDict(startInventory, ItemLookup.Items[itemName].ItemNameForInventory);
+                        }
+                    }
+                }
+            }
+            return startInventory;
+        }
+
+        public void ShowNotConnectedError() {
+            Notifications.Show($"[archipelago] \"ERROR: Lost connection to Archipelago!\"", $"\"Unable to send or receive items. Re-connect and try again.\"");
+        }
     }
 }

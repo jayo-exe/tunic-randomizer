@@ -10,8 +10,7 @@ using JayoVNyan;
 
 namespace TunicRandomizer {
     public class SceneLoaderPatches {
-        private static ManualLogSource Logger = TunicRandomizer.Logger;
-
+        
         public static string SceneName;
         public static int SceneId;
         public static float TimeOfLastSceneTransition = 0.0f;
@@ -19,6 +18,7 @@ namespace TunicRandomizer {
         public static bool InitialLoadDone = false;
 
         public static GameObject SpiritArenaTeleporterPrefab;
+        public static GameObject GlyphTowerTeleporterPrefab;
 
         public static bool SceneLoader_OnSceneLoaded_PrefixPatch(Scene loadingScene, LoadSceneMode mode, SceneLoader __instance) {
             // ladder storage fix
@@ -45,12 +45,16 @@ namespace TunicRandomizer {
                 }
             }
 
+            EnemyRandomizer.BossStateVars.ForEach(s => StateVariable.GetStateVariableByName(s).BoolValue = false);
+
             return true;
         }
 
         public static void SceneLoader_OnSceneLoaded_PostfixPatch(Scene loadingScene, LoadSceneMode mode, SceneLoader __instance) {
 
             ModelSwaps.SwappedThisSceneAlready = false;
+            EnemyRandomizer.RandomizedThisSceneAlready = false;
+            EnemyRandomizer.DidArachnophoiaModeAlready = false;
             SpawnedGhosts = false;
 
             CameraController.Flip = TunicRandomizer.Settings.CameraFlip;
@@ -62,9 +66,21 @@ namespace TunicRandomizer {
                 SceneLoader.LoadScene("TitleScreen");
                 return;
             }
+            if (loadingScene.name == "Overworld Interiors" && GlyphTowerTeleporterPrefab == null) {
+                GlyphTowerTeleporterPrefab = GameObject.Instantiate(GameObject.Find("Trophy Stuff").transform.GetChild(4).gameObject);
+                GlyphTowerTeleporterPrefab.SetActive(false);
+                GameObject.DontDestroyOnLoad(GlyphTowerTeleporterPrefab);
+                SceneLoader.LoadScene("Posterity");
+                return;
+            }
+            if (loadingScene.name == "Library Lab" && ModelSwaps.Chalkboard == null) {
+                ModelSwaps.CreateChalkboard();
+                SceneLoader.LoadScene("Overworld Interiors");
+                return;
+            }
             if (loadingScene.name == "Library Hall" && !EnemyRandomizer.Enemies.ContainsKey("administrator_servant")) {
                 EnemyRandomizer.InitializeEnemies("Library Hall");
-                SceneLoader.LoadScene("Posterity");
+                SceneLoader.LoadScene("Library Lab");
                 return;
             }
             if (loadingScene.name == "Cathedral Redux" && !EnemyRandomizer.Enemies.ContainsKey("Voidtouched")) {
@@ -107,9 +123,19 @@ namespace TunicRandomizer {
                 SceneLoader.LoadScene("Quarry");
                 return;
             }
+            if (loadingScene.name == "Crypt Redux" && !EnemyRandomizer.Enemies.ContainsKey("bomezome_quartet")) {
+                EnemyRandomizer.InitializeEnemies("Crypt Redux");
+                SceneLoader.LoadScene("Quarry Redux");
+                return;
+            }
             if (loadingScene.name == "Crypt" && !EnemyRandomizer.Enemies.ContainsKey("Shadowreaper")) {
                 EnemyRandomizer.InitializeEnemies("Crypt");
-                SceneLoader.LoadScene("Quarry Redux");
+                SceneLoader.LoadScene("Crypt Redux");
+                return;
+            }
+            if (loadingScene.name == "Fortress Arena" && !EnemyRandomizer.Enemies.ContainsKey("Spidertank")) {
+                EnemyRandomizer.InitializeEnemies("Fortress Arena");
+                SceneLoader.LoadScene("Crypt");
                 return;
             }
             if (loadingScene.name == "Fortress Basement" && !EnemyRandomizer.Enemies.ContainsKey("Spider Small")) {
@@ -117,7 +143,7 @@ namespace TunicRandomizer {
                 ModelSwaps.BlueFire = GameObject.Instantiate(GameObject.Find("Room - Big Room/Fortress wall lamp small unlit (1)/Fire/lamp fire"));
                 ModelSwaps.BlueFire.SetActive(false);
                 GameObject.DontDestroyOnLoad(ModelSwaps.BlueFire);
-                SceneLoader.LoadScene("Crypt");
+                SceneLoader.LoadScene("Fortress Arena");
                 return;
             }
             if (loadingScene.name == "frog cave main" && !EnemyRandomizer.Enemies.ContainsKey("Frog Small")) {
@@ -141,11 +167,16 @@ namespace TunicRandomizer {
                 SceneLoader.LoadScene("Sewer");
                 return;
             }
+            if (loadingScene.name == "DPADTesting" && DDRSpell.DPADPool == null) {
+                DDRSpell.CopyDPADTester();
+                SceneLoader.LoadScene("Atoll Redux");
+                return;
+            }
             if (loadingScene.name == "Archipelagos Redux" && ModelSwaps.GlowEffect == null) {
                 ModelSwaps.SetupGlowEffect();
                 EnemyRandomizer.InitializeEnemies("Archipelagos Redux");
                 ModelSwaps.InstantiateFishingRod();
-                SceneLoader.LoadScene("Atoll Redux");
+                SceneLoader.LoadScene("DPADTesting");
                 return;
             }
             if (loadingScene.name == "Transit" && !ModelSwaps.Items.ContainsKey("Relic - Hero Sword")) {
@@ -161,6 +192,7 @@ namespace TunicRandomizer {
                 SpiritArenaTeleporterPrefab.transform.position = new Vector3(-30000f, -30000f, -30000f);
                 SpiritArenaTeleporterPrefab.SetActive(false);
                 ModelSwaps.SetupStarburstEffect();
+                EnemyRandomizer.InitializeEnemies("Spirit Arena");
                 SceneLoader.LoadScene("Transit");
                 return;
             }
@@ -210,14 +242,14 @@ namespace TunicRandomizer {
                 Camera.main.transform.parent.gameObject.AddComponent<CycleController>();
             }
 
-            Logger.LogInfo("Entering scene " + loadingScene.name + " (" + loadingScene.buildIndex + ")");
+            TunicLogger.LogInfo("Entering scene " + loadingScene.name + " (" + loadingScene.buildIndex + ")");
             SceneName = loadingScene.name;
             SceneId = loadingScene.buildIndex;
 
             if (SceneName == "Overworld Redux" && (StateVariable.GetStateVariableByName("Has Been Betrayed").BoolValue &&
                 StateVariable.GetStateVariableByName("Has Died To God").BoolValue) && SaveFile.GetInt(DiedToHeir) != 1 && SaveFile.GetInt(HexagonQuestEnabled) == 0) {
                 PlayerCharacterPatches.ResetDayNightTimer = 0.0f;
-                Logger.LogInfo("Resetting time of day to daytime!"); 
+                TunicLogger.LogInfo("Resetting time of day to daytime!"); 
                 SpawnHeirFastTravel("Spirit Arena", new Vector3(2.0801f, 43.5833f, -54.0065f));
             }
 
@@ -226,7 +258,12 @@ namespace TunicRandomizer {
                 VNyanSender.SendActionToVNyan("TunicBigHead", new { status = "false" });
             }
             PlayerCharacterPatches.StungByBee = false;
-            
+            if (PlayerCharacterPatches.TinierFox)
+            {
+                VNyanSender.SendActionToVNyan("TunicTinyFox", new { status = "false" });
+            }
+            PlayerCharacterPatches.TinierFox = false;
+
             // Fur, Puff, Details, Tunic, Scarf
             if (TunicRandomizer.Settings.RandomFoxColorsEnabled) {
                 try {
@@ -278,8 +315,8 @@ namespace TunicRandomizer {
                 }
                 PlayerCharacterPatches.HeirAssistModeDamageValue = Locations.CheckedLocations.Values.ToList().Where(item => item).ToList().Count / 15;
                 if (SaveFile.GetInt(HexagonQuestEnabled) == 1) {
-                    Resources.FindObjectsOfTypeAll<Foxgod>().ToList()[0].gameObject.transform.GetChild(0).GetComponent<CreatureMaterialManager>().originalMaterials = ModelSwaps.Items["GoldenTrophy_2"].GetComponent<MeshRenderer>().materials;
-                    Resources.FindObjectsOfTypeAll<Foxgod>().ToList()[0].gameObject.transform.GetChild(1).GetComponent<CreatureMaterialManager>().originalMaterials = ModelSwaps.Items["GoldenTrophy_2"].GetComponent<MeshRenderer>().materials;
+                    GameObject.FindObjectOfType<Foxgod>().gameObject.transform.GetChild(0).GetComponent<CreatureMaterialManager>().originalMaterials = ModelSwaps.Items["GoldenTrophy_2"].GetComponent<MeshRenderer>().materials;
+                    GameObject.FindObjectOfType<Foxgod>().gameObject.transform.GetChild(1).GetComponent<CreatureMaterialManager>().originalMaterials = ModelSwaps.Items["GoldenTrophy_2"].GetComponent<MeshRenderer>().materials;
                 }
 
                 SpawnHeirFastTravel("Overworld Redux", new Vector3(-30000f, -30000f, -30000f));
@@ -316,12 +353,22 @@ namespace TunicRandomizer {
                     HintStatueGlow.transform.position = new Vector3(13f, 0f, 49f);
                     HintStatueGlow.AddComponent<VisibleByNotHavingItem>().Item = Inventory.GetItemByName("Hyperdash");
                 }
+
+                GameObject.Instantiate(ModelSwaps.Chalkboard, new Vector3(23.0934f, 7.2261f, 65.0646f), new Quaternion(0, 0.701f, 0, 0.701f)).SetActive(true);
             } else if (SceneName == "Overworld Redux") {
                 GameObject.Find("_Signposts/Signpost (3)/").GetComponent<Signpost>().message.text = $"#is wA too \"West Garden\"\n<#33FF33>[death] bEwAr uhv tArE [death]";
                 GameObject.Find("_Environment Special/Door (1)/door/key twist").GetComponent<MeshRenderer>().materials = ModelSwaps.Items["Key (House)"].GetComponent<MeshRenderer>().materials;
                 GameObject.Find("_Environment/_Decorations/Mailbox (1)/mailbox flag").AddComponent<MailboxFlag>();
 
                 GameObject.Find("_Bridges-Day/log bridge/").GetComponent<DayNightBridge>().dayOrNight = StateVariable.GetStateVariableByName("Is Night").BoolValue ? DayNightBridge.DayNight.NIGHT : DayNightBridge.DayNight.DAY;
+                
+                if (SaveFile.GetInt("seed") != 0 && (SaveFile.GetInt(LadderRandoEnabled) == 0 || Inventory.GetItemByName("Ladder to Swamp").Quantity == 1)) {
+                    for(int i = 0; i < 3; i++) {
+                        GameObject.Find("_Bridges-Night").transform.GetChild(i).gameObject.AddComponent<ToggleObjectByFuse>().fuseId = 1096;
+                        GameObject.Find("_Bridges-Night").transform.GetChild(i).gameObject.GetComponent<ToggleObjectByFuse>().stateWhenClosed = i != 0;
+                        GameObject.Find("_Bridges-Night").transform.GetChild(i).gameObject.SetActive(true);
+                    }
+                }
 
                 if (SaveFile.GetInt("randomizer entrance rando enabled") == 1 || (SaveFile.GetInt("seed") == 0 && 
                     ((TunicRandomizer.Settings.EntranceRandoEnabled && TunicRandomizer.Settings.Mode == RandomizerSettings.RandomizerType.SINGLEPLAYER) || 
@@ -340,6 +387,10 @@ namespace TunicRandomizer {
                 }
                 if (SaveFile.GetInt(DiedToHeir) == 1) {
                     SpawnHeirFastTravel("Spirit Arena", new Vector3(2.0801f, 43.5833f, -54.0065f));
+                }
+                if (TunicRandomizer.Settings.EnemyRandomizerEnabled) {
+                    GameObject.Instantiate(EnemyRandomizer.TuningFork, new Vector3(-183.9852f, 1f, -79.4829f), new Quaternion(0, 0, 0, 0)).SetActive(true);
+                    GameObject.Instantiate(EnemyRandomizer.TuningFork, new Vector3(-166.9155f, 1f, -72.0338f), new Quaternion(0, 0, 0, 0)).SetActive(true);
                 }
             } else if (SceneName == "Swamp Redux 2") {
                 GhostHints.SpawnCathedralDoorGhost();
@@ -362,6 +413,11 @@ namespace TunicRandomizer {
                     }
 
                 }
+
+                GameObject SignpostHint = GameObject.Instantiate(ModelSwaps.Signpost, new Vector3(-3.6754f, -1.175f, -74.2004f), new Quaternion(0, 0.8206f, 0, -0.5715f));
+                SignpostHint.transform.localScale = Vector3.one * 1.5f;
+                SignpostHint.AddComponent<BoxCollider>();
+                SignpostHint.SetActive(true);
 
                 if (TunicRandomizer.Settings.MoreSkulls) {
                     InteractionPatches.SpawnMoreSkulls();
@@ -398,12 +454,18 @@ namespace TunicRandomizer {
                 }
             } else if(SceneName == "frog cave main") { 
                 SetupFrogDomainSecret();
+            } else if (SceneName == "Sewer_Boss") {
+                SetupCryptSecret();
+            } else if (SceneName == "Crypt") {
+                SetupOldCryptStuff();
             } else if(SceneName == "Sword Access") {
                 GameObject Bush = GameObject.Find("_Grass/bush (70)");
                 if (Bush != null) {
                     Bush.SetActive(false);
                 }
             }
+
+            EnemyRandomizer.CheckBossState();
 
             if (SaveFile.GetInt("randomizer entrance rando enabled") == 1) {
                 if (IsArchipelago()) {
@@ -415,11 +477,11 @@ namespace TunicRandomizer {
                 TunicPortals.MarkPortals();
             }
 
-            if (TunicRandomizer.Settings.EnemyRandomizerEnabled && EnemyRandomizer.Enemies.Count > 0 && !EnemyRandomizer.ExcludedScenes.Contains(SceneName)) {
+            if (!EnemyRandomizer.RandomizedThisSceneAlready && SaveFile.GetInt("seed") != 0 && TunicRandomizer.Settings.EnemyRandomizerEnabled && EnemyRandomizer.Enemies.Count > 0 && !EnemyRandomizer.ExcludedScenes.Contains(SceneName)) {
                 EnemyRandomizer.SpawnNewEnemies();
             }
 
-            if (TunicRandomizer.Settings.ArachnophobiaMode) {
+            if (TunicRandomizer.Settings.ArachnophobiaMode && !EnemyRandomizer.DidArachnophoiaModeAlready) {
                 EnemyRandomizer.ToggleArachnophobiaMode();
             }
 
@@ -428,8 +490,8 @@ namespace TunicRandomizer {
                     ModelSwaps.SwapItemsInScene();
                 }
             } catch (Exception ex) {
-                Logger.LogError("An error occurred swapping item models in this scene:");
-                Logger.LogError(ex.Message + " " + ex.StackTrace);
+                TunicLogger.LogError("An error occurred swapping item models in this scene:");
+                TunicLogger.LogError(ex.Message + " " + ex.StackTrace);
             }
 
             if (SaveFile.GetInt(AbilityShuffle) == 1 && SaveFile.GetInt(HolyCrossUnlocked) == 0) {
@@ -442,8 +504,8 @@ namespace TunicRandomizer {
                     FairyTargets.FindFairyTargets();
                 }
             } catch (Exception ex) {
-                Logger.LogError("An error occurred creating new fairy seeker spell targets:");
-                Logger.LogError(ex.Message + " " + ex.StackTrace);
+                TunicLogger.LogError("An error occurred creating new fairy seeker spell targets:");
+                TunicLogger.LogError(ex.Message + " " + ex.StackTrace);
             }
 
             try {
@@ -451,7 +513,7 @@ namespace TunicRandomizer {
                     LadderToggles.ToggleLadders();
                 }
             } catch (Exception e) {
-                Logger.LogError("Error toggling ladders! " + e.Source + " " + e.Message + " " + e.StackTrace);
+                TunicLogger.LogError("Error toggling ladders! " + e.Source + " " + e.Message + " " + e.StackTrace);
             }
 
             try {
@@ -459,8 +521,8 @@ namespace TunicRandomizer {
                     PaletteEditor.LoadCustomTexture();
                 }
             } catch (Exception ex) {
-                Logger.LogError("An error occurred applying custom texture:");
-                Logger.LogError(ex.Message + " " + ex.StackTrace);
+                TunicLogger.LogError("An error occurred applying custom texture:");
+                TunicLogger.LogError(ex.Message + " " + ex.StackTrace);
             }
 
             if (TunicRandomizer.Settings.RealestAlwaysOn) {
@@ -480,21 +542,23 @@ namespace TunicRandomizer {
                     SpawnedGhosts = true;
                 }
             } catch (Exception ex) {
-                Logger.LogError("An error occurred spawning hint ghost foxes:");
-                Logger.LogError(ex.Message + " " + ex.StackTrace);
+                TunicLogger.LogError("An error occurred spawning hint ghost foxes:");
+                TunicLogger.LogError(ex.Message + " " + ex.StackTrace);
             }
 
             if (IsArchipelago()) {
                 Archipelago.instance.integration.UpdateDataStorageOnLoad();
             }
-
+            if (GameObject.FindObjectOfType<DDRSpell>() != null) {
+                GameObject.FindObjectOfType<DDRSpell>().spellToggles = GameObject.FindObjectsOfType<ToggleObjectBySpell>().ToArray();
+            }
             ItemTracker.SaveTrackerFile();
         }
 
         private static void SpawnHeirFastTravel(string SceneName, Vector3 position) {
             GameObject gameObject = GameObject.Instantiate<GameObject>(SpiritArenaTeleporterPrefab, position, SpiritArenaTeleporterPrefab.transform.rotation);
             ScenePortal scenePortal = gameObject.transform.GetComponentInChildren<ScenePortal>();
-            scenePortal.id = "heirfasttravel_spawnid";
+            scenePortal.id = "customfasttravel_spawnid";
             scenePortal.destinationSceneName = SceneName;
             if (SceneManager.GetActiveScene().name == "Spirit Arena") {
                 scenePortal.spawnTransform = GameObject.Find("Teleporter").transform.GetChild(0).GetChild(0).GetChild(0);
@@ -536,6 +600,45 @@ namespace TunicRandomizer {
                 CapeSecret.transform.GetChild(0).localScale = new Vector3(0.5f, 0.5f, 0.5f);
                 CapeSecret.AddComponent<VisibleByNotHavingItem>().Item = Inventory.GetItemByName("Cape");
                 CapeSecret.SetActive(true);
+            }
+        }
+
+        public static void SetupCryptSecret() {
+            GameObject portal = GameObject.Instantiate(GlyphTowerTeleporterPrefab);
+            portal.transform.position = new Vector3(100.3333f, 9.3138f, -10.201f);
+            portal.transform.localEulerAngles = new Vector3(0f, 270f, 0f);
+            portal.transform.localScale = Vector3.one;
+            portal.GetComponentInChildren<ScenePortal>().id = "customfasttravel_spawnid";
+            portal.GetComponentInChildren<ScenePortal>().destinationSceneName = "Crypt";
+            portal.SetActive(true);
+
+            GameObject spawn = new GameObject("crypt spawn");
+            spawn.AddComponent<PlayerCharacterSpawn>();
+            spawn.GetComponent<PlayerCharacterSpawn>().id = "Crypt_";
+            spawn.transform.position = GameObject.FindObjectOfType<Campfire>().transform.position;
+            spawn.SetActive(true);
+        }
+
+        public static void SetupOldCryptStuff() {
+            foreach (ScenePortal portal in GameObject.FindObjectsOfType<ScenePortal>()) {
+                portal.destinationSceneName = "Sewer_Boss";
+            }
+            foreach (Spiketrap trap in Resources.FindObjectsOfTypeAll<Spiketrap>()) {
+                trap.gameObject.SetActive(true);
+            }
+            foreach (Monster monster in Resources.FindObjectsOfTypeAll<Monster>().Where(monster => monster.gameObject.scene.name == "Crypt")) {
+                monster.gameObject.SetActive(true);
+            }
+            GameObject spawn = new GameObject("crypt spawn");
+            spawn.AddComponent<PlayerCharacterSpawn>();
+            spawn.GetComponent<PlayerCharacterSpawn>().id = "Sewer_Boss_customfasttravel_spawnid";
+            spawn.transform.position = new Vector3(-79.3f, 57f, -30.8f);
+            spawn.SetActive(true);
+            GameObject.FindObjectOfType<ToggleObjectBySpell>().stateVar = StateVariable.GetStateVariableByName("randomizer crypt secret filigree door opened");
+            GameObject.Instantiate(ModelSwaps.UnderConstruction, new Vector3(-72.0534f, 57, -15.2989f), new Quaternion(0, 0.7071f, 0, 0.7071f)).SetActive(true);
+            foreach (UnderConstruction sign in GameObject.FindObjectsOfType<UnderConstruction>()) {
+                sign.message = ScriptableObject.CreateInstance<LanguageLine>();
+                sign.message.text = "\"???\"";
             }
         }
 
