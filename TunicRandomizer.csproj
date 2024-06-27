@@ -71,6 +71,14 @@
       <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TUNIC\BepInEx\unhollowed\Il2CppSystem.Xml.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="InControl, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\BepInEx\unhollowed\InControl.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\mono\Managed\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TUNIC\BepInEx\core\Mono.Cecil.dll</HintPath>
       <Private>False</Private>
@@ -94,6 +102,10 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Text.Json, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\mono\Managed\System.Text.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -164,6 +176,18 @@
       <HintPath>..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TUNIC\BepInEx\unhollowed\UnityEngine.UIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\BepInEx\unhollowed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestWWWModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\BepInEx\unhollowed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
+    </Reference>
+    <Reference Include="websocket-sharp, Version=1.0.2.59611, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\SteamLibrary\steamapps\common\TUNIC\BepInEx\plugins\Tunic Randomizer\websocket-sharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\Archipelago\Archipelago.cs" />
@@ -185,7 +209,10 @@
     <Compile Include="src\Data\RandomizerSettings.cs" />
     <Compile Include="src\Data\SaveFlags.cs" />
     <Compile Include="src\Data\Translations.cs" />
+    <Compile Include="src\JayoVNyan\VNyanIntegration.cs" />
+    <Compile Include="src\JayoVNyan\VNyanSettings.cs" />
     <Compile Include="src\Patches\EnemyRandomizer.cs" />
+    <Compile Include="src\JayoVNyan\VNyanSender.cs" />
     <Compile Include="src\Patches\GhostHints.cs" />
     <Compile Include="src\Patches\InteractionPatches.cs" />
     <Compile Include="src\Patches\ItemPresentationPatches.cs" />
@@ -208,6 +235,7 @@
     <Compile Include="src\Patches\SpeedrunFinishlineDisplayPatches.cs" />
     <Compile Include="src\Patches\SwordProgression.cs" />
     <Compile Include="src\Patches\TitleVersion.cs" />
+    <Compile Include="src\Patches\JayoSpell.cs" />
     <Compile Include="src\Patches\WaveSpell.cs" />
     <Compile Include="src\PluginInfo.cs" />
     <Compile Include="src\TunicRandomizer.cs" />

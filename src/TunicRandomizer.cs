@@ -16,6 +16,7 @@ using UnhollowerRuntimeLib;
 using Newtonsoft.Json.Bson;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
+using JayoVNyan;
 
 namespace TunicRandomizer {
 
@@ -40,6 +41,7 @@ namespace TunicRandomizer {
 
             ClassInjector.RegisterTypeInIl2Cpp<Archipelago>();
             ClassInjector.RegisterTypeInIl2Cpp<WaveSpell>();
+            ClassInjector.RegisterTypeInIl2Cpp<JayoSpell>();
             ClassInjector.RegisterTypeInIl2Cpp<EntranceSeekerSpell>();
             ClassInjector.RegisterTypeInIl2Cpp<VisibleByNotHavingItem>();
             ClassInjector.RegisterTypeInIl2Cpp<HeroGraveToggle>();
@@ -88,6 +90,15 @@ namespace TunicRandomizer {
             Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter._Die_d__481), "MoveNext"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_Die_MoveNext_PostfixPatch")));
 
             Harmony.Patch(AccessTools.Method(typeof(Monster), "IDamageable_ReceiveDamage"), new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "Monster_IDamageable_ReceiveDamage_PrefixPatch")));
+
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "Die"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_Die_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "onFreeze"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_onFreeze_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "onUnfreeze"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_onUnfreeze_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "FlaskSwig_HP"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_FlaskSwig_HP_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "FlaskSwig_MP"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_FlaskSwig_MP_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "ApplyRadiationByRadsPerSec"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_ApplyRadiationByRadsPerSec_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(PlayerCharacter), "ApplyRadiationAsDamageInHP"), null, new HarmonyMethod(AccessTools.Method(typeof(PlayerCharacterPatches), "PlayerCharacter_ApplyRadiationAsDamageInHP_PostfixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(MagicSpell), "CheckInput"), null, new HarmonyMethod(AccessTools.Method(typeof(JayoSpell), "MagicSpell_CheckInput_PostfixPatch")));
 
             // Scene Loader
             Harmony.Patch(AccessTools.Method(typeof(SceneLoader), "OnSceneLoaded"), new HarmonyMethod(AccessTools.Method(typeof(SceneLoaderPatches), "SceneLoader_OnSceneLoaded_PrefixPatch")), new HarmonyMethod(AccessTools.Method(typeof(SceneLoaderPatches), "SceneLoader_OnSceneLoaded_PostfixPatch")));

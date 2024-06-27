@@ -15,6 +15,7 @@ using System.Globalization;
 using Archipelago.MultiClient.Net.Enums;
 using static TunicRandomizer.SaveFlags;
 using Newtonsoft.Json.Linq;
+using JayoVNyan;
 
 namespace TunicRandomizer {
     public class PlayerCharacterPatches {
@@ -38,10 +39,16 @@ namespace TunicRandomizer {
         public static float CompletionTimer = 0.0f;
         public static float ResetDayNightTimer = -1.0f;
         public static LadderEnd LastLadder = null;
-
+        public static bool IsOnFire = false;
+        public static bool IsInRadiation = false;
+        public static float lastRadsValue = 0f;
+        public static int lastRadsTime = 0;
+        public static float currentRadsValue = 0f;
+        public static int lastSwordLevel = 0;
         public static void PlayerCharacter_creature_Awake_PostfixPatch(PlayerCharacter __instance) {
 
             __instance.gameObject.AddComponent<WaveSpell>();
+            __instance.gameObject.AddComponent<JayoSpell>();
             __instance.gameObject.AddComponent<EntranceSeekerSpell>();
         }
 
@@ -103,8 +110,51 @@ namespace TunicRandomizer {
             }
 
             if (StungByBee) {
-                __instance.gameObject.transform.Find("Fox/root/pelvis/chest/head").localScale = new Vector3(3f, 3f, 3f);
+                __instance.gameObject.transform.Find("Fox/root/pelvis/chest/head").localScale = new Vector3(3f, 3f, 3f);   
             }
+
+            if(IsOnFire != __instance.cachedFireController.OnFire)
+            {
+                IsOnFire = __instance.cachedFireController.OnFire;
+                VNyanSender.SendActionToVNyan("TunicPlayerBurn", new { status = IsOnFire ? "true" : "false" });
+            }
+
+            if (!IsInRadiation && (lastRadsTime >= Time.frameCount - 10))
+            {
+                IsInRadiation = true;
+                VNyanSender.SendActionToVNyan("TunicPlayerRads", new { status = "true", rad_amount = lastRadsValue }) ;
+            }
+
+            if (IsInRadiation && (lastRadsTime < Time.frameCount - 10))
+            {
+                IsInRadiation = false;
+                VNyanSender.SendActionToVNyan("TunicPlayerRads", new { status = "false", rad_amount = lastRadsValue }) ;
+            }
+
+            if(lastSwordLevel == 0 && Inventory.GetItemByName("Stick").Quantity > 0)
+            {
+                lastSwordLevel = 1;
+                VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = lastSwordLevel });
+            }
+
+            if (lastSwordLevel < 2 && Inventory.GetItemByName("Sword").Quantity > 0)
+            {
+                lastSwordLevel = 2;
+                VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = lastSwordLevel });
+            }
+
+            if (lastSwordLevel == 2 && Inventory.GetItemByName("Librarian Sword").Quantity > 0)
+            {
+                lastSwordLevel = 3;
+                VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = lastSwordLevel });
+            }
+
+            if (lastSwordLevel == 3 && Inventory.GetItemByName("Heir Sword").Quantity > 0)
+            {
+                lastSwordLevel = 4;
+                VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = lastSwordLevel });
+            }
+
             if (LoadSwords && (GameObject.Find("_Fox(Clone)/Fox/root/pelvis/chest/arm_upper.R/arm_lower.R/hand.R/sword_proxy/") != null)) {
                 try {
                     SwordProgression.CreateSwordItemBehaviours(__instance);
@@ -132,6 +182,7 @@ namespace TunicRandomizer {
             }
             if (SpeedrunData.gameComplete != 0 && !SpeedrunFinishlineDisplayPatches.GameCompleted) {
                 SpeedrunFinishlineDisplayPatches.GameCompleted = true;
+                VNyanSender.SendActionToVNyan("TunicGameComplete", new { status = "true" });
                 SpeedrunFinishlineDisplayPatches.SetupCompletionStatsDisplay();
             }
             if (SpeedrunFinishlineDisplayPatches.ShowCompletionStatsAfterDelay) {
@@ -357,6 +408,11 @@ namespace TunicRandomizer {
         }
 
         private static void PlayerCharacter_Start_SinglePlayerSetup() {
+            if (TunicRandomizer.Settings.VNyanSettings.Enabled)
+            {
+                VNyanIntegration.TryConnect();
+            }
+
             int seed = SaveFile.GetInt("seed");
 
             if (seed == 0) {
@@ -395,6 +451,7 @@ namespace TunicRandomizer {
                     }
                     if (TunicRandomizer.Settings.StartWithSwordEnabled) {
                         Inventory.GetItemByName("Sword").Quantity = 1;
+
                         SaveFile.SetInt("randomizer started with sword", 1);
                     }
 
@@ -435,7 +492,7 @@ namespace TunicRandomizer {
             TunicRandomizer.Tracker = new ItemTracker();
             TunicRandomizer.Tracker.Seed = seed;
             Logger.LogInfo("Loading single player seed: " + seed);
-            if (TunicRandomizer.Settings.AlternateLogic)
+            if (TunicRandomizer.Settings.GameMode == RandomizerSettings.GameModes.HEXAGONQUEST && TunicRandomizer.Settings.AlternateLogic)
             {
                 AlternateItemRandomizer.PopulateSphereZero();
                 AlternateItemRandomizer.RandomizeAndPlaceItems();
@@ -448,6 +505,11 @@ namespace TunicRandomizer {
         }
 
         private static void PlayerCharacter_Start_ArchipelagoSetup() {
+            if (TunicRandomizer.Settings.VNyanSettings.Enabled)
+            {
+                VNyanIntegration.TryConnect();
+            }
+
             if (!Archipelago.instance.integration.connected) {
                 Archipelago.instance.Connect();
             } else {
@@ -643,11 +705,49 @@ namespace TunicRandomizer {
             if (!__result) {
                 int Deaths = SaveFile.GetInt(PlayerDeathCount);
                 SaveFile.SetInt(PlayerDeathCount, Deaths + 1);
+                
                 if (TunicRandomizer.Settings.DeathLinkEnabled && Archipelago.instance.integration.session.ConnectionInfo.Tags.Contains("DeathLink") && !DiedToDeathLink) {
                     Archipelago.instance.integration.SendDeathLink();
                 }
                 DiedToDeathLink = false;
             }
+        }
+
+        public static void PlayerCharacter_Die_PostfixPatch(PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicPlayerDie", new { status = "true" });
+        }
+
+        public static void PlayerCharacter_onFreeze_PostfixPatch(PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicPlayerFreeze", new { status = "true" });
+        }
+
+        public static void PlayerCharacter_onUnfreeze_PostfixPatch(PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicPlayerFreeze", new { status = "false" });
+        }
+
+        public static void PlayerCharacter_FlaskSwig_HP_PostfixPatch(PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicSippyHP", new { status = "true" });
+        }
+
+        public static void PlayerCharacter_FlaskSwig_MP_PostfixPatch(PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicSippyMP", new { status = "true" });
+        }
+
+        //ApplyRadiationByRadsPerSec
+        public static void PlayerCharacter_ApplyRadiationByRadsPerSec_PostfixPatch(ref float radsPerSec, ref bool ignoreAntiRadiationItem, PlayerCharacter __instance)
+        {
+            lastRadsValue = radsPerSec;
+            lastRadsTime = Time.frameCount;
+        }
+
+        public static void PlayerCharacter_ApplyRadiationAsDamageInHP_PostfixPatch(ref float dmg, PlayerCharacter __instance)
+        {
+            VNyanSender.SendActionToVNyan("TunicPlayerRadsHP", new { status = "true", dmg = dmg });
         }
 
         public static bool Monster_IDamageable_ReceiveDamage_PrefixPatch(Monster __instance) {
@@ -656,6 +756,7 @@ namespace TunicRandomizer {
                 return false;
             }
             if (__instance.name == "_Fox(Clone)") {
+                VNyanSender.SendActionToVNyan("TunicPlayerHit", new { status = "true" });
                 if (CustomItemBehaviors.CanTakeGoldenHit) {
                     GameObject.Find("_Fox(Clone)/fox").GetComponent<CreatureMaterialManager>().originalMaterials = CustomItemBehaviors.FoxBody.GetComponent<MeshRenderer>().materials;
                     GameObject.Find("_Fox(Clone)/fox hair").GetComponent<CreatureMaterialManager>().originalMaterials = CustomItemBehaviors.FoxHair.GetComponent<MeshRenderer>().materials;

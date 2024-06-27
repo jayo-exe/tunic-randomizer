@@ -3,12 +3,14 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using JayoVNyan;
 
 namespace TunicRandomizer {
 
     public class RandomizerSettings {
 
         public ConnectionSettings ConnectionSettings { get; set; }
+        public VNyanSettings VNyanSettings { get; set; }
 
         public enum RandomizerType {
             SINGLEPLAYER,
@@ -329,6 +331,7 @@ namespace TunicRandomizer {
         public RandomizerSettings() {
 
             ConnectionSettings = new ConnectionSettings();
+            VNyanSettings = new VNyanSettings();
             Mode = RandomizerType.SINGLEPLAYER;
 
             // Single Player

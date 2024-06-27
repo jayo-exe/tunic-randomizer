@@ -19,20 +19,62 @@ namespace TunicRandomizer {
         private static bool ShowAdvancedSinglePlayerOptions = false;
         private static bool ShowAPSettingsWindow = false;
         private static string stringToEdit = "";
+        private static int stringCursorPosition = 0;
         private static bool editingPlayer = false;
         private static bool editingHostname = false;
         private static bool editingPort = false;
         private static bool editingPassword = false;
+        private static bool editingVNyanAddress = false;
         private static bool showPort = false;
         private static bool showPassword = false;
+
+
+        private static string textWithCursor(string text, int cursor, bool isEditing)
+        {
+            if (!isEditing) return text;
+            if (cursor > text.Length) cursor = text.Length;
+            return text.Insert(cursor, "<color=#EAA614>|</color>");
+        }
+
+        private static void clearAllEditingFlags()
+        {
+            Logger.LogInfo("clearing all flags");
+            editingPlayer = false;
+            editingHostname = false;
+            editingPort = false;
+            editingPassword = false;
+            editingVNyanAddress = false;
+        }
+
+        private static void handleEditButton(string field, ref bool editingFlag)
+        {
+            
+            if (editingFlag)
+            {
+                stringToEdit = "";
+                stringCursorPosition = 0;
+                OptionsGUIPatches.SaveSettings();
+                GUIInput.instance.actionSet.Enabled = true;
+            }
+            else
+            {
+                clearAllEditingFlags();
+                stringToEdit = field;
+                stringCursorPosition = stringToEdit.Length;
+                GUIInput.instance.actionSet.Enabled = false;
+            }
+            editingFlag = !editingFlag;
+
+        }
         
+
         private void OnGUI() {
             if (SceneManager.GetActiveScene().name == "TitleScreen" && GameObject.FindObjectOfType<TitleScreen>() != null) {
                 GUI.skin.font = PaletteEditor.OdinRounded == null ? GUI.skin.font : PaletteEditor.OdinRounded;
                 Cursor.visible = true;
                 switch (TunicRandomizer.Settings.Mode) {
                     case RandomizerSettings.RandomizerType.SINGLEPLAYER:
-                        GUI.Window(101, new Rect(20f, 150f, 430f, TunicRandomizer.Settings.MysterySeed ? 470f : 550f), new Action<int>(SinglePlayerQuickSettingsWindow), "Single Player Settings");
+                        GUI.Window(101, new Rect(20f, 150f, 430f, 500 + (TunicRandomizer.Settings.MysterySeed ? 0f : 80f) + (TunicRandomizer.Settings.VNyanSettings.Enabled ? 80f : 0f)), new Action<int>(SinglePlayerQuickSettingsWindow), "Single Player Settings");
                         ShowAPSettingsWindow = false;
                         editingPlayer = false;
                         editingHostname = false;
@@ -40,7 +82,7 @@ namespace TunicRandomizer {
                         editingPassword = false;
                         break;
                     case RandomizerSettings.RandomizerType.ARCHIPELAGO:
-                        GUI.Window(101, new Rect(20f, 150f, 430f, 540f), new Action<int>(ArchipelagoQuickSettingsWindow), "Archipelago Settings");
+                        GUI.Window(101, new Rect(20f, 150f, 430f, 620f + (TunicRandomizer.Settings.VNyanSettings.Enabled ? 80f : 0f)), new Action<int>(ArchipelagoQuickSettingsWindow), "Archipelago Settings");
                         break;
                 }
 
@@ -51,37 +93,71 @@ namespace TunicRandomizer {
                     GUI.Window(105, new Rect(460f, 150f, 405f, 485f), new Action<int>(AdvancedLogicOptionsWindow), "Advanced Logic Options");
                 }
                 GameObject.Find("elderfox_sword graphic").GetComponent<Renderer>().enabled = !ShowAdvancedSinglePlayerOptions && !ShowAPSettingsWindow;
+
+
             }
         }
 
         private void Update() {
-            if (TunicRandomizer.Settings.Mode == RandomizerSettings.RandomizerType.ARCHIPELAGO && ShowAPSettingsWindow && SceneManager.GetActiveScene().name == "TitleScreen") {
-                if (Input.anyKeyDown && !Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.Tab) && !Input.GetKeyDown(KeyCode.Backspace)) {
+            if (((TunicRandomizer.Settings.Mode == RandomizerSettings.RandomizerType.ARCHIPELAGO && ShowAPSettingsWindow) || (TunicRandomizer.Settings.VNyanSettings.Enabled)) && SceneManager.GetActiveScene().name == "TitleScreen") {
+                bool submitKeyPressed = false;
+                if (Input.anyKeyDown && !Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.Escape) && !Input.GetKeyDown(KeyCode.Tab) && !Input.GetKeyDown(KeyCode.Backspace) && !Input.GetKeyDown(KeyCode.Delete) && !Input.GetKeyDown(KeyCode.LeftArrow) && !Input.GetKeyDown(KeyCode.RightArrow)) {
 
                     if (editingPort && Input.inputString != "" && int.TryParse(Input.inputString, out int num)) {
-                        stringToEdit += Input.inputString;
+                        Logger.LogInfo($"inserting {Input.inputString} at position {stringCursorPosition} in string {stringToEdit}");
+                        stringToEdit = stringToEdit.Insert(stringCursorPosition, Input.inputString);
+                        stringCursorPosition++;
                     } else if (!editingPort && Input.inputString != "") {
-                        stringToEdit += Input.inputString;
+                        Logger.LogInfo($"inserting {Input.inputString} at position {stringCursorPosition} in string {stringToEdit}");
+                        stringToEdit = stringToEdit.Insert(stringCursorPosition, Input.inputString);
+                        stringCursorPosition++;
                     }
                 }
                 if (Input.GetKeyDown(KeyCode.Backspace)) {
-                    if (stringToEdit.Length >= 2) {
-                        stringToEdit = stringToEdit.Substring(0, stringToEdit.Length - 1);
-                    } else {
-                        stringToEdit = "";
+                    if (stringToEdit.Length > 0 && stringCursorPosition > 0) {
+                        stringToEdit = stringToEdit.Remove(stringCursorPosition - 1, 1);
+                        stringCursorPosition--;
                     }
+                }
+                if (Input.GetKeyDown(KeyCode.Delete))
+                {
+                    if (stringToEdit.Length > 0 && stringCursorPosition < stringToEdit.Length)
+                    {
+                        stringToEdit = stringToEdit.Remove(stringCursorPosition, 1);
+                    }
+                }
+                if (Input.GetKeyDown(KeyCode.LeftArrow) && stringCursorPosition > 0)
+                {
+                    stringCursorPosition--;
+                }
+                if (Input.GetKeyDown(KeyCode.RightArrow) && stringCursorPosition < stringToEdit.Length)
+                {
+                    stringCursorPosition++;
+                }
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Escape))
+                {
+                    submitKeyPressed = true;
                 }
                 if (editingPlayer) {
                     TunicRandomizer.Settings.ConnectionSettings.Player = stringToEdit;
+                    if(submitKeyPressed) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Player, ref editingPlayer);
                 }
                 if (editingHostname) {
                     TunicRandomizer.Settings.ConnectionSettings.Hostname = stringToEdit;
+                    if (submitKeyPressed) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Hostname, ref editingHostname);
                 }
                 if (editingPort) {
                     TunicRandomizer.Settings.ConnectionSettings.Port = stringToEdit;
+                    if (submitKeyPressed) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Port, ref editingPort);
                 }
                 if (editingPassword) {
                     TunicRandomizer.Settings.ConnectionSettings.Password = stringToEdit;
+                    if (submitKeyPressed) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Password, ref editingPassword);
+                }
+                if (editingVNyanAddress)
+                {
+                    TunicRandomizer.Settings.VNyanSettings.Address = stringToEdit;
+                    if (submitKeyPressed) handleEditButton(TunicRandomizer.Settings.VNyanSettings.Address, ref editingVNyanAddress);
                 }
             }
         }
@@ -221,7 +297,43 @@ namespace TunicRandomizer {
             TunicRandomizer.Settings.DeathLinkEnabled = DeathLink;
             bool EnemyRandomizer = GUI.Toggle(new Rect(150f, y, 180f, 30f), TunicRandomizer.Settings.EnemyRandomizerEnabled, "Enemy Randomizer");
             TunicRandomizer.Settings.EnemyRandomizerEnabled = EnemyRandomizer;
+            GUI.skin.label.fontSize = 25;
+
+            y += 40f;
+            GUI.Label(new Rect(10f, y, 400f, 30f), "VNyan Socket Settings");
             GUI.skin.label.fontSize = 20;
+            y += 40f;
+            bool VNyanSocketEnabled = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.VNyanSettings.Enabled, "Enable VNyan Socket");
+            TunicRandomizer.Settings.VNyanSettings.Enabled = VNyanSocketEnabled;
+
+            if (TunicRandomizer.Settings.VNyanSettings.Enabled)
+            {
+                y += 40f;
+
+                GUI.Label(new Rect(10f, y, 400f, 30f), $"Address: {textWithCursor(TunicRandomizer.Settings.VNyanSettings.Address, stringCursorPosition, editingVNyanAddress)}");
+
+                y += 40f;
+                bool EditVNyanAddress = GUI.Button(new Rect(10f, y, 75f, 30f), editingVNyanAddress ? "Save" : "Edit");
+                if (EditVNyanAddress) handleEditButton(TunicRandomizer.Settings.VNyanSettings.Address, ref editingVNyanAddress);
+                
+                bool PasteVNyanAddress = GUI.Button(new Rect(100f, y, 75f, 30f), "Paste");
+                if (PasteVNyanAddress)
+                {
+                    TunicRandomizer.Settings.VNyanSettings.Address = GUIUtility.systemCopyBuffer;
+                    editingPlayer = false;
+                    OptionsGUIPatches.SaveSettings();
+                }
+                bool ClearVNyanAddress = GUI.Button(new Rect(190f, y, 75f, 30f), "Clear");
+                if (ClearVNyanAddress)
+                {
+                    if (editingVNyanAddress)
+                    {
+                        stringToEdit = "";
+                    }
+                    TunicRandomizer.Settings.VNyanSettings.Address = "";
+                    OptionsGUIPatches.SaveSettings();
+                }
+            }
         }
 
         private static void SinglePlayerQuickSettingsWindow(int windowID) {
@@ -278,6 +390,7 @@ namespace TunicRandomizer {
                 y += 40f;
                 GUI.Label(new Rect(10f, y, 400f, 30f), "Settings will be chosen randomly on New Game.");
                 y += 40f;
+                GUI.skin.label.fontSize = 25;
             } else {
                 bool ToggleHexagonQuest = GUI.Toggle(new Rect(10f, y, 175f, 30f), TunicRandomizer.Settings.GameMode == RandomizerSettings.GameModes.HEXAGONQUEST, "Hexagon Quest");
                 if (ToggleHexagonQuest) {
@@ -292,9 +405,6 @@ namespace TunicRandomizer {
                 y += 40f;
                 TunicRandomizer.Settings.EntranceRandoEnabled = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.EntranceRandoEnabled, "Entrance Randomizer");
                 TunicRandomizer.Settings.StartWithSwordEnabled = GUI.Toggle(new Rect(240f, y, 175f, 30f), TunicRandomizer.Settings.StartWithSwordEnabled, "Start With Sword");
-                
-                y += 40f;
-                TunicRandomizer.Settings.AlternateLogic = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.AlternateLogic, "Alt. Randomization");
 
                 y += 40f;
                 GUI.skin.button.fontSize = 20;
@@ -309,6 +419,47 @@ namespace TunicRandomizer {
             y += 40f;
             TunicRandomizer.Settings.EnemyRandomizerEnabled = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.EnemyRandomizerEnabled, "Enemy Randomizer");
             GUI.skin.button.fontSize = 20;
+            y += 40f;
+
+            GUI.Label(new Rect(10f, y, 400f, 30f), "VNyan Socket Settings");
+
+            y += 40f;
+            bool VNyanSocketEnabled = GUI.Toggle(new Rect(10f, y, 200f, 30f), TunicRandomizer.Settings.VNyanSettings.Enabled, "Enable VNyan Socket");
+            TunicRandomizer.Settings.VNyanSettings.Enabled = VNyanSocketEnabled;
+
+            if(TunicRandomizer.Settings.VNyanSettings.Enabled)
+            {
+                y += 40f;
+                GUI.skin.button.fontSize = 17;
+                GUI.skin.label.fontSize = 20;
+
+                GUI.Label(new Rect(10f, y, 400f, 30f), $"Address: {textWithCursor(TunicRandomizer.Settings.VNyanSettings.Address, stringCursorPosition, editingVNyanAddress)}");
+
+                y += 40f;
+                bool EditVNyanAddress = GUI.Button(new Rect(10f, y, 75f, 30f), editingVNyanAddress ? "Save" : "Edit");
+                if (EditVNyanAddress) handleEditButton(TunicRandomizer.Settings.VNyanSettings.Address, ref editingVNyanAddress);
+                bool PasteVNyanAddress = GUI.Button(new Rect(100f, y, 75f, 30f), "Paste");
+                if (PasteVNyanAddress)
+                {
+                    TunicRandomizer.Settings.VNyanSettings.Address = GUIUtility.systemCopyBuffer;
+                    editingPlayer = false;
+                    OptionsGUIPatches.SaveSettings();
+                }
+                bool ClearVNyanAddress = GUI.Button(new Rect(190f, y, 75f, 30f), "Clear");
+                if (ClearVNyanAddress)
+                {
+                    if (editingVNyanAddress)
+                    {
+                        stringToEdit = "";
+                    }
+                    TunicRandomizer.Settings.VNyanSettings.Address = "";
+                    OptionsGUIPatches.SaveSettings();
+                }
+                GUI.skin.button.fontSize = 20;
+                GUI.skin.label.fontSize = 25;
+            }
+
+
             y += 40f;
             GUI.Label(new Rect(10f, y, 300f, 30f), $"Custom Seed: {(CustomSeed == "" ? "Not Set" : CustomSeed.ToString())}");
             y += 40f;
@@ -344,6 +495,8 @@ namespace TunicRandomizer {
             GUI.Label(new Rect(10f, y, 220f, 30f), $"<size=18>Hexagons in Item Pool:</size>");
             GUI.Label(new Rect(190f, y, 30f, 30f), $"<size=18>{((int)Math.Round((100f + TunicRandomizer.Settings.HexagonQuestExtraPercentage) / 100f * TunicRandomizer.Settings.HexagonQuestGoal))}</size>");
             TunicRandomizer.Settings.HexagonQuestExtraPercentage = (int)GUI.HorizontalSlider(new Rect(220f, y + 15, 175f, 30f), TunicRandomizer.Settings.HexagonQuestExtraPercentage, 0, 100);
+            y += 30f;
+            TunicRandomizer.Settings.AlternateLogic = GUI.Toggle(new Rect(10f, y, 300f, 30f), TunicRandomizer.Settings.AlternateLogic, "Use Alternate Randomization Logic");
             y += 40f;
             GUI.Label(new Rect(10f, y, 300f, 30f), $"Entrance Randomizer");
             y += 40f;
@@ -402,21 +555,9 @@ namespace TunicRandomizer {
         private static void ArchipelagoConfigEditorWindow(int windowID) {
             GUI.skin.label.fontSize = 25;
             GUI.skin.button.fontSize = 17;
-            GUI.Label(new Rect(10f, 20f, 300f, 30f), $"Player: {(TunicRandomizer.Settings.ConnectionSettings.Player)}");
+            GUI.Label(new Rect(10f, 20f, 300f, 30f), $"Player: {textWithCursor(TunicRandomizer.Settings.ConnectionSettings.Player, stringCursorPosition, editingPlayer)}");
             bool EditPlayer = GUI.Button(new Rect(10f, 70f, 75f, 30f), editingPlayer ? "Save" : "Edit");
-            if (EditPlayer) {
-                if (editingPlayer) {
-                    stringToEdit = "";
-                    editingPlayer = false;
-                    OptionsGUIPatches.SaveSettings();
-                } else {
-                    stringToEdit = TunicRandomizer.Settings.ConnectionSettings.Player;
-                    editingPlayer = true;
-                    editingHostname = false;
-                    editingPort = false;
-                    editingPassword = false;
-                }
-            }
+            if (EditPlayer) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Player, ref editingPlayer);
             bool PastePlayer = GUI.Button(new Rect(100f, 70f, 75f, 30f), "Paste");
             if (PastePlayer) {
                 TunicRandomizer.Settings.ConnectionSettings.Player = GUIUtility.systemCopyBuffer;
@@ -432,7 +573,7 @@ namespace TunicRandomizer {
                 OptionsGUIPatches.SaveSettings();
             }
 
-            GUI.Label(new Rect(10f, 120f, 300f, 30f), $"Host: {(TunicRandomizer.Settings.ConnectionSettings.Hostname)}");
+            GUI.Label(new Rect(10f, 120f, 300f, 30f), $"Host: {textWithCursor(TunicRandomizer.Settings.ConnectionSettings.Hostname, stringCursorPosition, editingHostname)}");
             bool setLocalhost = GUI.Toggle(new Rect(160f, 160f, 90f, 30f), TunicRandomizer.Settings.ConnectionSettings.Hostname == "localhost", "localhost");
             if (setLocalhost && TunicRandomizer.Settings.ConnectionSettings.Hostname != "localhost") {
                 TunicRandomizer.Settings.ConnectionSettings.Hostname = "localhost";
@@ -444,19 +585,7 @@ namespace TunicRandomizer {
                 OptionsGUIPatches.SaveSettings();
             }
             bool EditHostname = GUI.Button(new Rect(10f, 200f, 75f, 30f), editingHostname ? "Save" : "Edit");
-            if (EditHostname) {
-                if (editingHostname) {
-                    stringToEdit = "";
-                    editingHostname = false;
-                    OptionsGUIPatches.SaveSettings();
-                } else {
-                    stringToEdit = TunicRandomizer.Settings.ConnectionSettings.Hostname;
-                    editingPlayer = false;
-                    editingHostname = true;
-                    editingPort = false;
-                    editingPassword = false;
-                }
-            }
+            if (EditHostname) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Hostname, ref editingHostname);
             bool PasteHostname = GUI.Button(new Rect(100f, 200f, 75f, 30f), "Paste");
             if (PasteHostname) {
                 TunicRandomizer.Settings.ConnectionSettings.Hostname = GUIUtility.systemCopyBuffer;
@@ -472,22 +601,11 @@ namespace TunicRandomizer {
                 OptionsGUIPatches.SaveSettings();
             }
 
-            GUI.Label(new Rect(10f, 250f, 300f, 30f), $"Port: {(editingPort ? (showPort ? stringToEdit : new string('*', stringToEdit.Length)) : (showPort ? TunicRandomizer.Settings.ConnectionSettings.Port.ToString() : new string('*', TunicRandomizer.Settings.ConnectionSettings.Port.ToString().Length)))}");
+            GUI.Label(new Rect(10f, 250f, 300f, 30f), $"Port: {textWithCursor((editingPort ? (showPort ? stringToEdit : new string('*', stringToEdit.Length)) : (showPort ? TunicRandomizer.Settings.ConnectionSettings.Port.ToString() : new string('*', TunicRandomizer.Settings.ConnectionSettings.Port.ToString().Length))), stringCursorPosition, editingPort)}");
             showPort = GUI.Toggle(new Rect(270f, 260f, 75f, 30f), showPort, "Show");
             bool EditPort = GUI.Button(new Rect(10f, 300f, 75f, 30f), editingPort ? "Save" : "Edit");
-            if (EditPort) {
-                if (editingPort) {
-                    stringToEdit = "";
-                    editingPort = false;
-                    OptionsGUIPatches.SaveSettings();
-                } else {
-                    stringToEdit = TunicRandomizer.Settings.ConnectionSettings.Port.ToString();
-                    editingPlayer = false;
-                    editingHostname = false;
-                    editingPort = true;
-                    editingPassword = false;
-                }
-            }
+            if (EditPort) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Port.ToString(), ref editingPort);
+
             bool PastePort = GUI.Button(new Rect(100f, 300f, 75f, 30f), "Paste");
             if (PastePort) {
                 try {
@@ -509,22 +627,10 @@ namespace TunicRandomizer {
                 OptionsGUIPatches.SaveSettings();
             }
 
-            GUI.Label(new Rect(10f, 350f, 300f, 30f), $"Password: {(showPassword ? TunicRandomizer.Settings.ConnectionSettings.Password : new string('*', TunicRandomizer.Settings.ConnectionSettings.Password.Length))}");
+            GUI.Label(new Rect(10f, 350f, 300f, 30f), $"Password: {textWithCursor((showPassword ? TunicRandomizer.Settings.ConnectionSettings.Password : new string('*', TunicRandomizer.Settings.ConnectionSettings.Password.Length)), stringCursorPosition, editingPort)}");
             showPassword = GUI.Toggle(new Rect(270f, 360f, 75f, 30f), showPassword, "Show");
             bool EditPassword = GUI.Button(new Rect(10f, 400f, 75f, 30f), editingPassword ? "Save" : "Edit");
-            if (EditPassword) {
-                if (editingPassword) {
-                    stringToEdit = "";
-                    editingPassword = false;
-                    OptionsGUIPatches.SaveSettings();
-                } else {
-                    stringToEdit = TunicRandomizer.Settings.ConnectionSettings.Password;
-                    editingPlayer = false;
-                    editingHostname = false;
-                    editingPort = false;
-                    editingPassword = true;
-                }
-            }
+            if (EditPassword) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Password, ref editingPassword);
 
             bool PastePassword = GUI.Button(new Rect(100f, 400f, 75f, 30f), "Paste");
             if (PastePassword) {

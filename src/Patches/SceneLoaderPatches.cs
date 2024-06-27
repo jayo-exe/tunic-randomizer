@@ -6,6 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
+using JayoVNyan;
 
 namespace TunicRandomizer {
     public class SceneLoaderPatches {
@@ -220,7 +221,12 @@ namespace TunicRandomizer {
                 SpawnHeirFastTravel("Spirit Arena", new Vector3(2.0801f, 43.5833f, -54.0065f));
             }
 
+            if(PlayerCharacterPatches.StungByBee)
+            {
+                VNyanSender.SendActionToVNyan("TunicBigHead", new { status = "false" });
+            }
             PlayerCharacterPatches.StungByBee = false;
+            
             // Fur, Puff, Details, Tunic, Scarf
             if (TunicRandomizer.Settings.RandomFoxColorsEnabled) {
                 try {
@@ -539,6 +545,8 @@ namespace TunicRandomizer {
                 ItemStatsHUD.HexagonQuest.SetActive(false);
             }
             SceneName = "TitleScreen";
+            PlayerCharacterPatches.lastSwordLevel = 0;
+            VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = 0 });
         }
 
     }

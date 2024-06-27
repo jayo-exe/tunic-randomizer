@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
+using JayoVNyan;
 
 namespace TunicRandomizer {
     public class SwordProgression {
@@ -11,7 +12,6 @@ namespace TunicRandomizer {
         public static void UpgradeSword(int SwordLevel) {
             
             SaveFile.SetInt(SwordProgressionLevel, SwordLevel);
-
             if (SwordLevel == 1) {
                 //fownd ahn Itehm!
                 Inventory.GetItemByName("Stick").Quantity = 1;

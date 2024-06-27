@@ -1236,6 +1236,8 @@ namespace TunicRandomizer {
             TuncTitleImage = CreateSprite(ImageData.TuncTitle, ImageMaterial, 1400, 742, "tunc title logo");
             TuncImage = CreateSprite(ImageData.Tunc, ImageMaterial, 148, 148, "tunc sprite");
 
+            CustomItemImages.Add("Jayo Icon", CreateSprite(ImageData.JayoIcon, ImageMaterial, SpriteName: "Randomizer items_Jayo Icon"));
+            CustomItemImages.Add("Jayo Evil Icon", CreateSprite(ImageData.JayoEvilIcon, ImageMaterial, SpriteName: "Randomizer items_Jayo Evil Icon"));
             CustomItemImages.Add("Librarian Sword", CreateSprite(ImageData.SecondSword, ImageMaterial, SpriteName: "Randomizer items_Librarian Sword"));
             CustomItemImages.Add("Heir Sword", CreateSprite(ImageData.ThirdSword, ImageMaterial, SpriteName: "Randomizer items_Heir Sword"));
             CustomItemImages.Add("Mr Mayor", CreateSprite(ImageData.MrMayor, ImageMaterial, SpriteName: "Randomizer items_Mr Mayor"));

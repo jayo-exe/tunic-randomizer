@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.GhostHints;
 using static TunicRandomizer.SaveFlags;
+using JayoVNyan;
 
 namespace TunicRandomizer {
 
@@ -231,7 +232,7 @@ namespace TunicRandomizer {
 
             ItemData Item = ItemLookup.Items[ItemName];
             string LocationId = Archipelago.instance.integration.session.Locations.GetLocationNameFromId(networkItem.Location);
-            
+            VNyanSender.SendActionToVNyan("TunicGiveItem", Item);
             if (Item.Type == ItemTypes.MONEY) {
                 int AmountToGive = Item.QuantityToGive;
 
@@ -443,6 +444,8 @@ namespace TunicRandomizer {
 
             ItemData Item = ItemLookup.GetItemDataFromCheck(Check);
 
+            
+
             if (Item.Type == ItemTypes.MONEY) {
                 int AmountToGive = Check.Reward.Amount;
 
@@ -617,6 +620,11 @@ namespace TunicRandomizer {
                 }
             }
 
+            if (Item.ItemNameForInventory == "Hyperdash")
+            {
+                VNyanSender.SendActionToVNyan("TunicGetLaurels", new { status = "true" }); 
+            }
+
             if (TunicRandomizer.Settings.SkipItemAnimations || DisplayMessageAnyway) {
                 NotificationTop = NotificationTop == "" ? $"yoo fownd  {(TextBuilderPatches.ItemNameToAbbreviation.ContainsKey(Item.Name) ? TextBuilderPatches.ItemNameToAbbreviation[Item.Name] : "")}  \"{Item.Name}!\"" : NotificationTop;
                 NotificationBottom = NotificationBottom == "" ? $"$oud bE yoosfuhl!" : NotificationBottom;
@@ -632,6 +640,7 @@ namespace TunicRandomizer {
             }
 
             TunicRandomizer.Tracker.SetCollectedItem(Item.Name, true);
+            VNyanSender.SendActionToVNyan("TunicGiveItem", Item);
 
             string CheckId = $"{Check.Location.LocationId} [{Check.Location.SceneName}]";
             Logger.LogInfo("Picked up item " + CheckId + " (" + Item.Name + ")");
@@ -659,8 +668,9 @@ namespace TunicRandomizer {
             if (FoolType < 35) {
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
-                FoolMessageTop = $"yoo R A \"<#ffd700>FOOL<#ffffff>!!\" [fooltrap]";
+                FoolMessageTop = $"yoo R A \"<#ffd700>FOOL<#ffffff>!!\" [jayoevil]";
                 FoolMessageBottom = $"\"(\"it wuhz A swRm uhv <#ffd700>bEz\"...)\"";
+                VNyanSender.SendActionToVNyan("TunicBigHead", new { status = "true" });
                 PlayerCharacterPatches.StungByBee = true;
                 PlayerCharacter.instance.Flinch(true);
             } else if (FoolType >= 35 && FoolType < 50) {
@@ -668,16 +678,18 @@ namespace TunicRandomizer {
                 PlayerCharacter.instance.stamina = 0;
                 PlayerCharacter.instance.cachedFireController.FireAmount = 3f;
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
-                FoolMessageTop = $"yoo R A \"<#FF3333>FOOL<#ffffff>!!\" [fooltrap]";
+                FoolMessageTop = $"yoo R A \"<#FF3333>FOOL<#ffffff>!!\" [jayoevil]";
                 FoolMessageBottom = $"iz it hawt in hEr?";
+                VNyanSender.SendActionToVNyan("TunicFireTrap", new { status = "true" });
                 PlayerCharacter.instance.Flinch(true);
             } else if (FoolType >= 50) {
                 PlayerCharacter.ApplyRadiationAsDamageInHP(PlayerCharacter.instance.maxhp * .2f);
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
                 SFX.PlayAudioClipAtFox(PlayerCharacter.standardFreezeSFX);
                 PlayerCharacter.instance.AddFreezeTime(3f);
-                FoolMessageTop = $"yoo R A \"<#86A5FF>FOOL<#ffffff>!!\" [fooltrap]";
+                FoolMessageTop = $"yoo R A \"<#86A5FF>FOOL<#ffffff>!!\" [jayoevil]";
                 FoolMessageBottom = $"hahvi^ ahn Is tIm?";
+                VNyanSender.SendActionToVNyan("TunicFreezeTrap", new { status = "true" });
             }
 
             if (Player == -1 && IsSinglePlayer()) {
