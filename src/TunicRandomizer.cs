@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.IL2CPP;
-using UnityEngine;
 using HarmonyLib;
 using Newtonsoft.Json;
+using System.IO;
 using UnhollowerRuntimeLib;
 using Newtonsoft.Json.Bson;
+using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using JayoVNyan;
@@ -71,7 +66,14 @@ namespace TunicRandomizer {
             }) {
                 hideFlags = HideFlags.HideAndDontSave
             });
-            
+            ClassInjector.RegisterTypeInIl2Cpp<CreditsSkipper>();
+            UnityEngine.Object.DontDestroyOnLoad(new GameObject("credits skipper", new Il2CppSystem.Type[]
+            {
+                Il2CppType.Of<CreditsSkipper>()
+            }) {
+                hideFlags = HideFlags.HideAndDontSave
+            });
+
             if (!Directory.Exists(Application.persistentDataPath + "/Randomizer/")) {
                 Directory.CreateDirectory(Application.persistentDataPath + "/Randomizer/");
             }
@@ -162,7 +164,9 @@ namespace TunicRandomizer {
             Harmony.Patch(AccessTools.Method(typeof(FairyCollection), "getFairyCount"), new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "FairyCollection_getFairyCount_PrefixPatch")));
 
             Harmony.Patch(AccessTools.Method(typeof(UpgradeAltar), "DoOfferingSequence"), new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "UpgradeAltar_DoOfferingSequence_PrefixPatch")), new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "UpgradeAltar_DoOfferingSequence_PostfixPatch")));
-            
+
+            Harmony.Patch(AccessTools.Method(typeof(OfferingItem), "PriceForNext"), null, new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "OfferingItem_PriceForNext_PostfixPatch")));
+
             Harmony.Patch(AccessTools.Method(typeof(ButtonAssignableItem), "CheckFreeItemSpell"), null, new HarmonyMethod(AccessTools.Method(typeof(ItemPatches), "ButtonAssignableItem_CheckFreeItemSpell_PostfixPatch")));
 
             Harmony.Patch(AccessTools.PropertyGetter(typeof(Item), "ShouldShowInInventory"), new HarmonyMethod(AccessTools.Method(typeof(CustomItemBehaviors), "Item_shouldShowInInventory_GetterPatch")));
@@ -218,7 +222,7 @@ namespace TunicRandomizer {
 
             Harmony.Patch(AccessTools.Method(typeof(SaveFile), "GetNewSaveFileName"), null, new HarmonyMethod(AccessTools.Method(typeof(OptionsGUIPatches), "SaveFile_GetNewSaveFileName_PostfixPatch")));
 
-            Harmony.Patch(AccessTools.Method(typeof(InventoryDisplay), "Update"), new HarmonyMethod(AccessTools.Method(typeof(ItemStatsHUD), "InventoryDisplay_Update_PrefixPatch")));
+            Harmony.Patch(AccessTools.Method(typeof(InventoryDisplay), "Update"), new HarmonyMethod(AccessTools.Method(typeof(InventoryDisplayPatches), "InventoryDisplay_Update_PrefixPatch")));
 
             Harmony.Patch(AccessTools.Method(typeof(PauseMenu), "__button_ReturnToTitle"), null, new HarmonyMethod(AccessTools.Method(typeof(SceneLoaderPatches), "PauseMenu___button_ReturnToTitle_PostfixPatch")));
 

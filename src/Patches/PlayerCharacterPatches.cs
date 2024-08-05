@@ -1,18 +1,12 @@
 ﻿using Archipelago.MultiClient.Net.Models;
-using BepInEx.Logging;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
-using Newtonsoft.Json;
-using UnityEngine.UI;
-using System.Globalization;
-using Archipelago.MultiClient.Net.Enums;
 using static TunicRandomizer.SaveFlags;
 using Newtonsoft.Json.Linq;
 using JayoVNyan;
@@ -35,8 +29,6 @@ namespace TunicRandomizer {
         public static bool LoadCustomTexture = false;
         public static bool WearHat = false;
         public static float TimeWhenLastChangedDayNight = 0.0f;
-        public static float FinishLineSwordTimer = 0.0f;
-        public static float CompletionTimer = 0.0f;
         public static float ResetDayNightTimer = -1.0f;
         public static LadderEnd LastLadder = null;
         public static bool IsOnFire = false;
@@ -178,19 +170,6 @@ namespace TunicRandomizer {
                     ResetDayNightTimer = -1.0f;
                 }
             }
-            if (SpeedrunData.gameComplete != 0 && !SpeedrunFinishlineDisplayPatches.GameCompleted) {
-                SpeedrunFinishlineDisplayPatches.GameCompleted = true;
-                VNyanSender.SendActionToVNyan("TunicGameComplete", new { status = "true" });
-                SpeedrunFinishlineDisplayPatches.SetupCompletionStatsDisplay();
-            }
-            if (SpeedrunFinishlineDisplayPatches.ShowCompletionStatsAfterDelay) {
-                CompletionTimer += Time.fixedUnscaledDeltaTime;
-                if (CompletionTimer > 6.0f) {
-                    CompletionTimer = 0.0f;
-                    SpeedrunFinishlineDisplayPatches.CompletionCanvas.SetActive(true);
-                    SpeedrunFinishlineDisplayPatches.ShowCompletionStatsAfterDelay = false;
-                }
-            }
             if (SpeedrunData.timerRunning && SceneLoaderPatches.SceneName != null && Locations.AllScenes.Count > 0) {
                 float AreaPlaytime = SaveFile.GetFloat($"randomizer play time {SceneLoaderPatches.SceneName}");
                 SaveFile.SetFloat($"randomizer play time {SceneLoaderPatches.SceneName}", AreaPlaytime + Time.unscaledDeltaTime);
@@ -284,13 +263,6 @@ namespace TunicRandomizer {
                 InvButton.SetActive(false);
             }
 
-            if (Locations.AllScenes.Count == 0) {
-                for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++) {
-                    string SceneName = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
-                    Locations.AllScenes.Add(SceneName);
-                }
-            }
-
             StateVariable.GetStateVariableByName("SV_ShopTrigger_Fortress").BoolValue = true;
             StateVariable.GetStateVariableByName("SV_ShopTrigger_Sewer").BoolValue = true;
             StateVariable.GetStateVariableByName("SV_ShopTrigger_Swamp(Night)").BoolValue = true;
@@ -354,7 +326,15 @@ namespace TunicRandomizer {
                 SaveFile.SetInt("last page viewed", 0);
             }
 
+            // this is here for the first time you're loading in, assumes you're in Overworld
+            if (SaveFile.GetInt("randomizer entrance rando enabled") == 1) {
+                TunicPortals.ModifyPortals("Overworld Redux");
+            } else {
+                TunicPortals.ModifyPortalNames("Overworld Redux");
+            }
+
             try {
+                TunicUtils.FindChecksInLogic();
                 FairyTargets.CreateFairyTargets();
                 FairyTargets.CreateEntranceTargets();
                 FairyTargets.FindFairyTargets();
@@ -367,7 +347,7 @@ namespace TunicRandomizer {
                 GhostHints.SpawnHintGhosts(SceneLoaderPatches.SceneName);
             }
 
-            ItemStatsHUD.UpdateAbilitySection();
+            InventoryDisplayPatches.UpdateAbilitySection();
 
             OptionsGUIPatches.SaveSettings();
 
@@ -381,11 +361,6 @@ namespace TunicRandomizer {
 
             if (TunicRandomizer.Settings.ArachnophobiaMode && !EnemyRandomizer.DidArachnophoiaModeAlready) {
                 EnemyRandomizer.ToggleArachnophobiaMode();
-            }
-
-            // this is here for the first time you're loading in, assumes you're in Overworld
-            if (SaveFile.GetInt("randomizer entrance rando enabled") == 1) {
-                TunicPortals.ModifyPortals("Overworld Redux");
             }
 
             try {
@@ -618,6 +593,8 @@ namespace TunicRandomizer {
                 if (slotData.TryGetValue("Entrance Rando", out var entranceRandoPortals)) {
                     TunicPortals.CreatePortalPairs(((JObject)slotData["Entrance Rando"]).ToObject<Dictionary<string, string>>());
                     TunicPortals.ModifyPortals("Overworld Redux");
+                } else {
+                    TunicPortals.ModifyPortalNames("Overworld Redux");
                 }
                 if (slotData.TryGetValue("shuffle_ladders", out var ladderRando)) {
                     if (SaveFile.GetInt(LadderRandoEnabled) == 0 && ladderRando.ToString() == "1") {
@@ -653,8 +630,6 @@ namespace TunicRandomizer {
                 }
                 SaveFile.SaveToDisk();
 
-                Locations.PopulateMajorItemLocations(slotData);
-
                 Locations.RandomizedLocations.Clear();
                 Locations.CheckedLocations.Clear();
                 ItemLookup.ItemList.Clear();
@@ -677,6 +652,8 @@ namespace TunicRandomizer {
 
                     Archipelago.instance.integration.UpdateDataStorageOnLoad();
                 }
+
+                Locations.PopulateMajorItemLocations(slotData);
 
             }
         }
@@ -708,7 +685,7 @@ namespace TunicRandomizer {
             if (random.Next(2) == 1) {
                 SaveFile.SetInt("randomizer keys behind bosses", 1);
             }
-            if (random.Next(2) == 1) {
+            if (TunicRandomizer.Settings.StartWithSwordEnabled) {
                 Inventory.GetItemByName("Sword").Quantity = 1;
                 SaveFile.SetInt("randomizer started with sword", 1);
             }

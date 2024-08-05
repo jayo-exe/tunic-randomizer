@@ -1,7 +1,5 @@
 ﻿using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
-using Archipelago.MultiClient;
-using BepInEx.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,15 +1,11 @@
-﻿using System;
+﻿using FMODUnity;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using BepInEx.Logging;
-using UnhollowerBaseLib;
-using UnityEngine.SceneManagement;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
-using FMODUnity;
 
 namespace TunicRandomizer {
 
@@ -1292,7 +1288,7 @@ namespace TunicRandomizer {
         }
 
         public static bool Monster_OnTouchKillbox_PrefixPatch(Monster __instance) {
-            if (__instance.TryCast<Foxgod>() != null) {
+            if (__instance.GetComponent<BossEnemy>() != null) {
                 GameObject.Destroy(__instance.gameObject);
                 if (PlayerCharacter.Instanced) {
                     PlayerCharacter.instance.cutsceneHidden = false;

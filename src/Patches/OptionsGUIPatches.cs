@@ -1,15 +1,15 @@
-﻿using System;
+﻿using FMODUnity;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using UnityEngine;
+using System.Linq;
 using UnhollowerBaseLib;
 using UnhollowerRuntimeLib;
-using Newtonsoft.Json;
-using static TunicRandomizer.SaveFlags;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using FMODUnity;
+using static TunicRandomizer.SaveFlags;
 
 namespace TunicRandomizer {
     public class OptionsGUIPatches {
@@ -105,9 +105,12 @@ namespace TunicRandomizer {
             OptionsGUI.addToggle("Ghost Fox Hints", "Off", "On", TunicRandomizer.Settings.GhostFoxHintsEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleGhostFoxHints);
             OptionsGUI.addToggle("Freestanding Items Match Contents", "Off", "On", TunicRandomizer.Settings.ShowItemsEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleShowItems);
             OptionsGUI.addToggle("Chests Match Contents", "Off", "On", TunicRandomizer.Settings.ChestsMatchContentsEnabled ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleChestsMatchContents);
-            OptionsGUI.addToggle("Display Hints in Trunic", "Off", "On", TunicRandomizer.Settings.UseTrunicTranslations ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleTrunicHints); 
-            OptionsGUI.addToggle("Spoiler Log", "Off", "On", TunicRandomizer.Settings.CreateSpoilerLog ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleSpoilerLog);
-            OptionsGUI.addButton("Open Spoiler Log", (Action)OpenLocalSpoilerLog);
+            OptionsGUI.addToggle("Display Hints in Trunic", "Off", "On", TunicRandomizer.Settings.UseTrunicTranslations ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleTrunicHints);
+            OptionsGUI.addToggle("Seeking Spell Uses Logic", "Off", "On", TunicRandomizer.Settings.SeekingSpellLogic ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleFairyLogic);
+            if (!Archipelago.instance.integration.disableSpoilerLog) {
+                OptionsGUI.addToggle("Spoiler Log", "Off", "On", TunicRandomizer.Settings.CreateSpoilerLog ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)ToggleSpoilerLog);
+                OptionsGUI.addButton("Open Spoiler Log", (Action)OpenLocalSpoilerLog);
+            }
             OptionsGUI.setHeading("Hints");
         }
 
@@ -228,6 +231,7 @@ namespace TunicRandomizer {
             if (SecretMayor.shouldBeActive || SecretMayor.isCorrectDate()) {
                 OptionsGUI.addToggle("Mr Mayor", "Off", "On", SecretMayor.shouldBeActive ? 1 : 0, (OptionsGUIMultiSelect.MultiSelectAction)SecretMayor.ToggleMayorSecret);
             }
+            addPageButton("Debug Menu", DebugFunctionsPage);
         }
 
         public static void MusicSettingsPage() {
@@ -288,6 +292,13 @@ namespace TunicRandomizer {
             foreach (KeyValuePair<string, EventReference> pair in MusicShuffler.Tracks) {
                 OptionsGUI.addButton(pair.Key, (Action)(() => { MusicShuffler.PlayTrack(pair.Key, pair.Value); }));
             }
+        }
+
+        public static void DebugFunctionsPage() {
+            OptionsGUI OptionsGUI = GameObject.FindObjectOfType<OptionsGUI>();
+            OptionsGUI.setHeading("Debug");
+            OptionsGUI.addButton("Open Saves Folder", (Action)(() => { System.Diagnostics.Process.Start(Application.persistentDataPath + "/SAVES"); }));
+            OptionsGUI.addButton("Open Log File", (Action)(() => { System.Diagnostics.Process.Start(Application.dataPath + "/../BepInEx/LogOutput.log"); }));
         }
 
         public static void addPageButton(string pageName, Action pageMethod) {
@@ -517,6 +528,11 @@ namespace TunicRandomizer {
 
         public static void ToggleFasterUpgrades(int index) {
             TunicRandomizer.Settings.FasterUpgrades = !TunicRandomizer.Settings.FasterUpgrades;
+            SaveSettings();
+        }
+
+        public static void ToggleFairyLogic(int index) {
+            TunicRandomizer.Settings.SeekingSpellLogic = !TunicRandomizer.Settings.SeekingSpellLogic;
             SaveSettings();
         }
 

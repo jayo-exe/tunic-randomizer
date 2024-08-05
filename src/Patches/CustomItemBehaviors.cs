@@ -1,5 +1,4 @@
-﻿using BepInEx.Logging;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -80,6 +79,9 @@ namespace TunicRandomizer {
                     Inventory.itemList.Add(Torch);
                 }
             }
+            Item Spear = Inventory.GetItemByName("Spear");
+            Inventory.itemList.Remove(Spear);
+            Inventory.itemList.Add(Spear);
         }
 
         public static bool SpearItemBehaviour_onActionButtonDown_PrefixPatch(SpearItemBehaviour __instance) {

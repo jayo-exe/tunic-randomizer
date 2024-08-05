@@ -1,5 +1,4 @@
 ﻿using Archipelago.MultiClient.Net.Models;
-using BepInEx.Logging;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -193,6 +192,12 @@ namespace TunicRandomizer {
 
         public static void PopulateSpoilerLog() {
             if (TunicRandomizer.Settings.RaceMode) { return; }
+            if (IsArchipelago() && Archipelago.instance.integration.disableSpoilerLog) { 
+                if (File.Exists(TunicRandomizer.SpoilerLogPath)) {
+                    File.Delete(TunicRandomizer.SpoilerLogPath);
+                }
+                return;
+            }
 
             int seed = SaveFile.GetInt("seed");
             Dictionary<string, List<string>> SpoilerLog = new Dictionary<string, List<string>>();

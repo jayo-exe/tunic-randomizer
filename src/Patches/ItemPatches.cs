@@ -1,15 +1,10 @@
-﻿using Archipelago.MultiClient.Net.Helpers;
-using Archipelago.MultiClient.Net.Models;
-using BepInEx.Logging;
+﻿using Archipelago.MultiClient.Net.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using static TunicRandomizer.GhostHints;
 using static TunicRandomizer.SaveFlags;
 using JayoVNyan;
 
@@ -241,7 +236,6 @@ namespace TunicRandomizer {
 
             ItemData Item = ItemLookup.Items[ItemName];
             string itemDisplay = TextBuilderPatches.ItemNameToAbbreviation.ContainsKey(ItemName) ? TextBuilderPatches.ItemNameToAbbreviation[ItemName] : "";
-            string LocationId = itemInfo.LocationName;
             
             VNyanSender.SendActionToVNyan("TunicGiveItem", Item);
             if (Item.Type == ItemTypes.MONEY) {
@@ -254,8 +248,8 @@ namespace TunicRandomizer {
                     { "Shop - Coin 2", 999 }
                 };
                 // If buying your own money item from the shop, increase amount rewarded
-                if (OriginalShopPrices.ContainsKey(LocationId) && (itemInfo.Player == Archipelago.instance.GetPlayerSlot())) {
-                    AmountToGive += TunicRandomizer.Settings.CheaperShopItemsEnabled ? 300 : OriginalShopPrices[LocationId];
+                if (itemInfo.LocationName != null && OriginalShopPrices.ContainsKey(itemInfo.LocationName) && (itemInfo.Player == Archipelago.instance.GetPlayerSlot())) {
+                    AmountToGive += TunicRandomizer.Settings.CheaperShopItemsEnabled ? 300 : OriginalShopPrices[itemInfo.LocationName];
                 }
 
                 if (TunicRandomizer.Settings.SkipItemAnimations) {
@@ -337,7 +331,7 @@ namespace TunicRandomizer {
                         if (Item.ItemNameForInventory == "21") {
                             ToggleHolyCrossObjects(true);
                         }
-                        ItemStatsHUD.UpdateAbilitySection();
+                        InventoryDisplayPatches.UpdateAbilitySection();
                     }
                 }
                 if (!TunicRandomizer.Settings.SkipItemAnimations) {
@@ -404,7 +398,7 @@ namespace TunicRandomizer {
                             ToggleHolyCrossObjects(true);
                         }
 
-                        ItemStatsHUD.UpdateAbilitySection();
+                        InventoryDisplayPatches.UpdateAbilitySection();
                     }
                 }
 
@@ -444,6 +438,8 @@ namespace TunicRandomizer {
             }
 
             TunicRandomizer.Tracker.SetCollectedItem(ItemName, true);
+
+            FairyTargets.UpdateFairyTargetsInLogic(ItemName);
 
             return ItemResult.Success;
         }
@@ -548,7 +544,7 @@ namespace TunicRandomizer {
                         if (Item.ItemNameForInventory == "21") {
                             ToggleHolyCrossObjects(true);
                         }
-                        ItemStatsHUD.UpdateAbilitySection();
+                        InventoryDisplayPatches.UpdateAbilitySection();
                     }
                 }
                 if (!TunicRandomizer.Settings.SkipItemAnimations) {
@@ -615,7 +611,7 @@ namespace TunicRandomizer {
                             ToggleHolyCrossObjects(true);
                         }
 
-                        ItemStatsHUD.UpdateAbilitySection();
+                        InventoryDisplayPatches.UpdateAbilitySection();
                     }
                 }
 
@@ -663,9 +659,12 @@ namespace TunicRandomizer {
             if (FairyTarget != null) {
                 GameObject.Destroy(FairyTarget);
             }
-            if (Locations.VanillaLocations.Keys.Where(key => Locations.VanillaLocations[key].Location.SceneName == SceneLoaderPatches.SceneName && !Locations.CheckedLocations[key]).ToList().Count == 0) {
+            // todo: set this to only happen if the logic option isn't on
+            if (Locations.VanillaLocations.Keys.Where(key => Locations.VanillaLocations[key].Location.SceneName == SceneLoaderPatches.SceneName && !Locations.CheckedLocations[key]).ToList().Count == 0
+                && !TunicRandomizer.Settings.SeekingSpellLogic) {
                 FairyTargets.CreateLoadZoneTargets();
             }
+            FairyTargets.UpdateFairyTargetsInLogic(ItemLookup.SimplifiedItemNames[Check.Reward.Name]);
 
             if (TunicRandomizer.Settings.CreateSpoilerLog && !TunicRandomizer.Settings.RaceMode) {
                 ItemTracker.PopulateSpoilerLog();
@@ -674,10 +673,10 @@ namespace TunicRandomizer {
 
         private static (string, string) ApplyFoolEffect(int Player) {
             System.Random Random = new System.Random();
-            int FoolType = PlayerCharacterPatches.StungByBee ? Random.Next(21, 100) : Random.Next(100);
+            int FoolType = Random.Next(100);
             string FoolMessageTop = $"";
             string FoolMessageBottom = $"";
-            if (FoolType < 5) {
+            if (FoolType < 10) {
                 // Mirror trap
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
@@ -687,7 +686,7 @@ namespace TunicRandomizer {
                 CameraController.Flip = true;
                 PlayerCharacterPatches.MirrorMode = true;
                 PlayerCharacter.instance.Flinch(true);
-            } else if (FoolType >= 5 && FoolType < 15) {
+            } else if (FoolType >= 10 && FoolType < 30) {
                 // Tiny fox trap
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
@@ -696,7 +695,7 @@ namespace TunicRandomizer {
                 VNyanSender.SendActionToVNyan("TunicTinyFox", new { status = "true" });
                 PlayerCharacterPatches.TinierFox = true;
                 PlayerCharacter.instance.Flinch(true);
-            } else if (FoolType >= 15 && FoolType < 40) {
+            } else if (FoolType >= 30 && FoolType < 50) {
                 // Bee trap
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
                 PlayerCharacter.instance.IDamageable_ReceiveDamage(PlayerCharacter.instance.hp / 3, 0, Vector3.zero, 0, 0);
@@ -705,7 +704,7 @@ namespace TunicRandomizer {
                 VNyanSender.SendActionToVNyan("TunicBigHead", new { status = "true" });
                 PlayerCharacterPatches.StungByBee = true;
                 PlayerCharacter.instance.Flinch(true);
-            } else if (FoolType >= 40 && FoolType < 65) {
+            } else if (FoolType >= 50 && FoolType < 70) {
                 // Fire trap
                 PlayerCharacter.ApplyRadiationAsDamageInHP(0f);
                 PlayerCharacter.instance.stamina = 0;
@@ -715,7 +714,7 @@ namespace TunicRandomizer {
                 FoolMessageBottom = $"iz it hawt in hEr?";
                 VNyanSender.SendActionToVNyan("TunicFireTrap", new { status = "true" });
                 PlayerCharacter.instance.Flinch(true);
-            } else if (FoolType >= 65) {
+            } else if (FoolType >= 70) {
                 // Ice trap
                 PlayerCharacter.ApplyRadiationAsDamageInHP(PlayerCharacter.instance.maxhp * .2f);
                 SFX.PlayAudioClipAtFox(PlayerCharacter.instance.bigHurtSFX);
@@ -806,6 +805,7 @@ namespace TunicRandomizer {
             
             if (TunicRandomizer.Settings.FasterUpgrades) {
                 Notifications.Show($"{TextBuilderPatches.SpriteNameToAbbreviation[offeringItemToOffer.icon.name]} \"{offeringItemToOffer.statLabelLocKey}\" wehnt uhp fruhm {offeringItemToOffer.upgradeItemReceived.Quantity} [arrow_right] {offeringItemToOffer.upgradeItemReceived.Quantity+1}!", $"#E Ar ahksehpts yor awfuri^.");
+                UpgradePresentation.instance.afterEnable().MoveNext();
                 UpgradeMenu.instance.__Exit();
                 return false;
             }
@@ -817,6 +817,10 @@ namespace TunicRandomizer {
             foreach (string LevelUp in ItemLookup.LevelUpItems) {
                 TunicRandomizer.Tracker.ImportantItems[LevelUp] = Inventory.GetItemByName(LevelUp).Quantity;
             }
+        }
+
+        public static void OfferingItem_PriceForNext_PostfixPatch(OfferingItem __instance, ref int __result) {
+            __result -= Mathf.RoundToInt(__instance.priceIncreasePerLevelup * (float)ItemLookup.BonusUpgrades.Where(bonus => Inventory.GetItemByName(bonus.Key).Quantity > 0 && bonus.Value.LevelUp == __instance.upgradeItemReceived.name).Count());
         }
 
         public static bool FairyCollection_getFairyCount_PrefixPatch(FairyCollection __instance, ref int __result) {

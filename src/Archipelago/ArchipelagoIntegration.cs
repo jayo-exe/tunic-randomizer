@@ -1,25 +1,16 @@
-﻿using Archipelago.MultiClient.Net.Enums;
-using Archipelago.MultiClient.Net;
-using BepInEx.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Archipelago.MultiClient.Net.Models;
-using System.Collections.Concurrent;
-using System.Threading;
-using UnityEngine.SceneManagement;
-using UnityEngine;
+﻿using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
 using Newtonsoft.Json;
-using System.Globalization;
-using Archipelago.MultiClient.Net.Packets;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices.ComTypes;
-using Archipelago.MultiClient.Net.Helpers;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
-using Archipelago.MultiClient.Net.Exceptions;
 using static TunicRandomizer.TunicPortals;
 
 namespace TunicRandomizer {
@@ -37,6 +28,7 @@ namespace TunicRandomizer {
         private ConcurrentQueue<ItemInfo> outgoingItems;
         private DeathLinkService deathLinkService;
         public Dictionary<string, object> slotData;
+        public bool disableSpoilerLog = false;
         public bool sentCompletion = false;
         public bool sentRelease = false;
         public bool sentCollect = false;
@@ -125,6 +117,16 @@ namespace TunicRandomizer {
                     deathLinkService.EnableDeathLink();
                 }
 
+                if (slotData.ContainsKey("disable_local_spoiler") && slotData["disable_local_spoiler"].ToString() == "1") {
+                    disableSpoilerLog = true;
+                    TunicRandomizer.Settings.CreateSpoilerLog = false;
+                    if (File.Exists(TunicRandomizer.SpoilerLogPath)) {
+                        File.Delete(TunicRandomizer.SpoilerLogPath);
+                    }
+                } else {
+                    disableSpoilerLog = false;
+                }
+
                 SetupDataStorage();
 
             } else {
@@ -153,6 +155,7 @@ namespace TunicRandomizer {
                 incomingItemHandler = null;
                 outgoingItemHandler = null;
                 checkItemsReceived = null;
+                disableSpoilerLog = false;
                 incomingItems = new ConcurrentQueue<(ItemInfo ItemInfo, int ItemIndex)>();
                 outgoingItems = new ConcurrentQueue<ItemInfo>();
                 deathLinkService = null;
@@ -299,6 +302,10 @@ namespace TunicRandomizer {
                         outgoingItems.Enqueue(ItemInfo);
                     }
                 });
+
+                if (FairyTargets.ItemTargetsInLogic.Count == 0) {
+                    FairyTargets.CreateLogicLoadZoneTargets(addImmediately: true);
+                }
 
             } else {
                 TunicLogger.LogWarning("Failed to get unique name for check " + LocationName);
@@ -455,7 +462,7 @@ namespace TunicRandomizer {
                     if (item.LocationId == -2) {
                         string itemName = item.ItemName;
                         if (ItemLookup.Items.ContainsKey(itemName)) {
-                            ItemRandomizer.AddStringToDict(startInventory, ItemLookup.Items[itemName].ItemNameForInventory);
+                            TunicUtils.AddStringToDict(startInventory, ItemLookup.Items[itemName].ItemNameForInventory);
                         }
                     }
                 }

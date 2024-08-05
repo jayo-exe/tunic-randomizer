@@ -1,6 +1,4 @@
-﻿using BepInEx.Logging;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.Hints;
 using static TunicRandomizer.SaveFlags;
@@ -37,11 +35,14 @@ namespace TunicRandomizer {
                             }
                         }
                     }
+                    if (hintGhost.Hint.Contains("THE HEIR") && SaveFile.GetInt("randomizer entered portal Heir Arena Exit") == 1) {
+                        __instance.GetComponent<NPC>().script.text += $"---... O! hahv yoo \"FOUND\" #ehm \"ALREADY?\" goud wurk!";
+                    }
                 }
 
                 if (GhostHints.HintGhosts.ContainsKey(__instance.name) && GhostHints.HexQuestHintLookup.ContainsKey(GhostHints.HintGhosts[__instance.name].Hint)) {
                     SaveFile.SetInt($"randomizer hex quest read {GhostHints.HexQuestHintLookup[GhostHints.HintGhosts[__instance.name].Hint]} hint", 1);
-                    ItemStatsHUD.UpdateAbilitySection();
+                    InventoryDisplayPatches.UpdateAbilitySection();
                     if (Inventory.GetItemByName("Hexagon Gold").Quantity >= SaveFile.GetInt($"randomizer hexagon quest {GhostHints.HexQuestHintLookup[GhostHints.HintGhosts[__instance.name].Hint].ToLower()} requirement")) {
                         __instance.GetComponent<NPC>().script.text += $"---... O! hahv yoo \"FOUND\" Enuhf \"ALREADY?\" goud wurk!";
                     }

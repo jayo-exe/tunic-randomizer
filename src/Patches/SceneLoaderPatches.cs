@@ -1,5 +1,4 @@
-﻿using BepInEx.Logging;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -250,6 +249,8 @@ namespace TunicRandomizer {
             if (SceneName == "Overworld Redux" && (StateVariable.GetStateVariableByName("Has Been Betrayed").BoolValue &&
                 StateVariable.GetStateVariableByName("Has Died To God").BoolValue) && SaveFile.GetInt(DiedToHeir) != 1 && SaveFile.GetInt(HexagonQuestEnabled) == 0) {
                 PlayerCharacterPatches.ResetDayNightTimer = 0.0f;
+                SaveFile.SetString("last campfire scene name", "Overworld Redux");
+                SaveFile.SetString("last campfire id", "checkpoint");
                 TunicLogger.LogInfo("Resetting time of day to daytime!"); 
                 SpawnHeirFastTravel("Spirit Arena", new Vector3(2.0801f, 43.5833f, -54.0065f));
             }
@@ -367,7 +368,9 @@ namespace TunicRandomizer {
                 GameObject.Find("_Environment/_Decorations/Mailbox (1)/mailbox flag").AddComponent<MailboxFlag>();
 
                 GameObject.Find("_Bridges-Day/log bridge/").GetComponent<DayNightBridge>().dayOrNight = StateVariable.GetStateVariableByName("Is Night").BoolValue ? DayNightBridge.DayNight.NIGHT : DayNightBridge.DayNight.DAY;
-                
+                GameObject.Find("_Bridges-Day/log bridge/").GetComponent<DayNightBridge>().updateActiveness();
+                GameObject.Destroy(GameObject.Find("_Bridges-Day/log bridge/").GetComponent<DayNightBridge>());
+
                 if (SaveFile.GetInt("seed") != 0 && (SaveFile.GetInt(LadderRandoEnabled) == 0 || Inventory.GetItemByName("Ladder to Swamp").Quantity == 1)) {
                     for(int i = 0; i < 3; i++) {
                         GameObject.Find("_Bridges-Night").transform.GetChild(i).gameObject.AddComponent<ToggleObjectByFuse>().fuseId = 1096;
@@ -469,6 +472,8 @@ namespace TunicRandomizer {
                 if (Bush != null) {
                     Bush.SetActive(false);
                 }
+            } else if (SceneName == "ziggurat2020_1" && SaveFile.GetInt(SaveFlags.EntranceRando) == 1) {
+                SpawnZigSkipRecovery();
             }
 
             EnemyRandomizer.CheckBossState();
@@ -480,8 +485,10 @@ namespace TunicRandomizer {
                     TunicPortals.RandomizePortals(SaveFile.GetInt("seed"));
                 }
                 TunicPortals.ModifyPortals(loadingScene.name);
-                TunicPortals.MarkPortals();
+            } else {
+                TunicPortals.ModifyPortalNames(loadingScene.name);
             }
+            TunicPortals.MarkPortals();
 
             if (!EnemyRandomizer.RandomizedThisSceneAlready && SaveFile.GetInt("seed") != 0 && TunicRandomizer.Settings.EnemyRandomizerEnabled && EnemyRandomizer.Enemies.Count > 0 && !EnemyRandomizer.ExcludedScenes.Contains(SceneName)) {
                 EnemyRandomizer.SpawnNewEnemies();
@@ -505,6 +512,7 @@ namespace TunicRandomizer {
             }
             try {
                 if (PlayerCharacter.instance != null) {
+                    TunicUtils.FindChecksInLogic();
                     FairyTargets.CreateFairyTargets();
                     FairyTargets.CreateEntranceTargets();
                     FairyTargets.FindFairyTargets();
@@ -573,6 +581,17 @@ namespace TunicRandomizer {
                 scenePortal.spawnTransform = gameObject.transform.GetChild(0).GetChild(0).GetChild(0);
             }
             scenePortal.optionalIDToSpawnAt = "";
+            gameObject.SetActive(true);
+        }
+
+        private static void SpawnZigSkipRecovery() {
+            GameObject gameObject = GameObject.Instantiate<GameObject>(SpiritArenaTeleporterPrefab, new Vector3(207f, 750f, -126f), SpiritArenaTeleporterPrefab.transform.rotation);
+            ScenePortal scenePortal = gameObject.transform.GetComponentInChildren<ScenePortal>();
+            scenePortal.id = "zig_skip_recovery";
+            scenePortal.optionalIDToSpawnAt = "zig2_skip";
+            scenePortal.destinationSceneName = "ziggurat2020_1";
+            scenePortal.name = "Zig Skip Recovery";
+            scenePortal.spawnTransform = gameObject.transform.GetChild(0).GetChild(0).GetChild(0);
             gameObject.SetActive(true);
         }
 
@@ -650,8 +669,8 @@ namespace TunicRandomizer {
 
         public static void PauseMenu___button_ReturnToTitle_PostfixPatch(PauseMenu __instance) {
 
-            if (ItemStatsHUD.HexagonQuest != null) {
-                ItemStatsHUD.HexagonQuest.SetActive(false);
+            if (InventoryDisplayPatches.HexagonQuest != null) {
+                InventoryDisplayPatches.HexagonQuest.SetActive(false);
             }
             SceneName = "TitleScreen";
             PlayerCharacterPatches.lastSwordLevel = 0;
