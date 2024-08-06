@@ -6,6 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using static TunicRandomizer.SaveFlags;
+using JayoVNyan;
 
 namespace TunicRandomizer {
     public class SpeedrunFinishlineDisplayPatches {
@@ -149,6 +150,7 @@ namespace TunicRandomizer {
         }
 
         public static void SpeedrunFinishlineDisplay_AndTime_PostfixPatch(SpeedrunFinishlineDisplay __instance) {
+            VNyanSender.SendActionToVNyan("TunicGameComplete", new { status = "true" });
             if (GameObject.Find("_FinishlineDisplay(Clone)/").transform.childCount >= 3) {
                 GameObject.Destroy(GameObject.Find("_FinishlineDisplay(Clone)/").transform.GetChild(2).gameObject);
             }

@@ -8,7 +8,6 @@ using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
-using Newtonsoft.Json.Linq;
 using JayoVNyan;
 
 namespace TunicRandomizer {
@@ -772,10 +771,12 @@ namespace TunicRandomizer {
 
         public static bool Monster_IDamageable_ReceiveDamage_PrefixPatch(Monster __instance) {
 
+            TunicLogger.LogInfo($"Damage Received By {__instance.name}");
             if (__instance.name == "Foxgod" && SaveFile.GetInt(HexagonQuestEnabled) == 1) {
                 return false;
             }
             if (__instance.name == "_Fox(Clone)") {
+                TunicLogger.LogInfo("Player is Hit!");
                 VNyanSender.SendActionToVNyan("TunicPlayerHit", new { status = "true" });
                 if (CustomItemBehaviors.CanTakeGoldenHit) {
                     GameObject.Find("_Fox(Clone)/fox").GetComponent<CreatureMaterialManager>().originalMaterials = CustomItemBehaviors.FoxBody.GetComponent<MeshRenderer>().materials;

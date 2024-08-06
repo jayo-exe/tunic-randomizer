@@ -83,6 +83,22 @@ namespace JayoVNyan {
             
         }
 
+        public static void SendActionToVNyan(string action, Dictionary<string, string> payloadDictionary)
+        {
+            payloadDictionary.Add("action", action);
+            string messageJson = JsonSerializer.Serialize(payloadDictionary);
+
+            try
+            {
+                socket.SendAsync(messageJson, null);
+            }
+            catch (Exception e)
+            {
+                LogInfo.Invoke($"could not send to VNyan; {e.Message}");
+            }
+
+        }
+
         public static void SocketOpened(object sender, EventArgs e)
         {
             OnWebsocketOpen.Invoke();

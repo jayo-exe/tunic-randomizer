@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
+using JayoVNyan;
 
 namespace TunicRandomizer {
 
@@ -1305,6 +1306,8 @@ namespace TunicRandomizer {
                 return false;
             }
             if (__instance.name == "_Fox(Clone)") {
+                TunicLogger.LogInfo("Player is Hit!");
+                VNyanSender.SendActionToVNyan("TunicPlayerHit", new { status = "true", amount = damagePoints });
                 if (CustomItemBehaviors.CanTakeGoldenHit) {
                     GameObject.Find("_Fox(Clone)/fox").GetComponent<CreatureMaterialManager>().originalMaterials = CustomItemBehaviors.FoxBody.GetComponent<MeshRenderer>().materials;
                     GameObject.Find("_Fox(Clone)/fox hair").GetComponent<CreatureMaterialManager>().originalMaterials = CustomItemBehaviors.FoxHair.GetComponent<MeshRenderer>().materials;

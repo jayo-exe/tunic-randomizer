@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using JayoVNyan;
 
 namespace TunicRandomizer {
     public class PaletteEditor : MonoBehaviour {
@@ -216,6 +217,7 @@ namespace TunicRandomizer {
                 ChangeHyperdashColors(PlayerPalette.runtimePalette.GetPixel(2, 3));
                 ChangeSunglassesColor(PlayerPalette.runtimePalette.GetPixel(2, 0));
                 ChangeCapeColor(PlayerPalette.runtimePalette.GetPixel(2, 2));
+                SendFoxColorsToVNyan();
             }
         }
 
@@ -226,6 +228,7 @@ namespace TunicRandomizer {
                     PlayerPalette.runtimePalette.SetPixel(Mathf.FloorToInt(i / 4f), i % 4, new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value, 1));
                     PlayerPalette.runtimePalette.Apply();
                 }
+                SendFoxColorsToVNyan();
             }
             // Hyperdash color
             Color HyperdashColor = new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value, 1);
@@ -259,6 +262,56 @@ namespace TunicRandomizer {
                 TheRealest.GetComponent<MeshRenderer>().material.color = new Color(1f, 1f, 1f, 1f);
             }
             ChangeCapeColor(DefaultColors[15]);
+            SendFoxColorsToVNyan();
+        }
+
+        public static void SendFoxColorsToVNyan()
+        {
+            TunicLogger.LogInfo("Sending Colors to VNyan");
+
+            Dictionary<int, string> jsonColorNames = new Dictionary<int, string>() {
+                {0, "fur"},
+                {1, "hair"},
+                {2, "laurels"},
+                {3, "tunic"},
+                {4, "furalt"},
+                {5, "pawsnose"},
+                {6, "cape"},
+                {7, "tunicback"},
+                {8, "ear"},
+                {9, "eyelure"},
+                {10, "unused"},
+                {11, "belt"},
+                {12, "eye"},
+                {13, "pupil"},
+                {14, "glasses"},
+                {15, "scarfmouth"},
+            };
+
+            Dictionary<string, string> colorsToSend = new Dictionary<string, string>();
+
+            foreach (int i in ColorIndices.Keys)
+            {
+                string currentName = jsonColorNames[i];
+                Color currentColor = PlayerPalette.runtimePalette.GetPixel(ColorIndices[i][0], ColorIndices[i][1]);
+                colorsToSend.Add(currentName, string.Format("#{0:X2}{1:X2}{2:X2}", (int)(currentColor.r * 255), (int)(currentColor.g * 255), (int)(currentColor.b * 255)));
+            }
+            TunicLogger.LogInfo("Color list built");
+
+
+            try
+            {
+                VNyanSender.SendActionToVNyan("TunicColors", colorsToSend);
+                TunicLogger.LogInfo("SentColors to VNyan");
+            } catch (Exception e)
+            {
+                TunicLogger.LogError($"Cannot send colors to VNyan: {e.Message}");
+            }
+            
+
+            
+
+
         }
 
         public static void GatherHyperdashRenderers() {

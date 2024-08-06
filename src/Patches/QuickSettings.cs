@@ -94,7 +94,7 @@ namespace TunicRandomizer {
                     GUI.Window(103, new Rect(460f * guiScale, (float)Screen.height * 0.12f, 350f * guiScale, 490f * guiScale), new Action<int>(ArchipelagoConfigEditorWindow), "Archipelago Config");
                 }
                 if (ShowAdvancedSinglePlayerOptions && TunicRandomizer.Settings.Mode == RandomizerSettings.RandomizerType.SINGLEPLAYER && !TunicRandomizer.Settings.MysterySeed) {
-                    GUI.Window(105, new Rect(460f * guiScale, (float)Screen.height * 0.12f, 465f * guiScale, 485f * guiScale), new Action<int>(AdvancedLogicOptionsWindow), "Advanced Logic Options");
+                    GUI.Window(105, new Rect(460f * guiScale, (float)Screen.height * 0.12f, 465f * guiScale, 540f * guiScale), new Action<int>(AdvancedLogicOptionsWindow), "Advanced Logic Options");
                 }
                 GameObject.Find("elderfox_sword graphic").GetComponent<Renderer>().enabled = !ShowAdvancedSinglePlayerOptions && !ShowAPSettingsWindow;
                 if (TitleVersion.TitleButtons != null) {
@@ -325,7 +325,7 @@ namespace TunicRandomizer {
 
             y += 40f * guiScale;
             GUI.Label(new Rect(10f * guiScale, y, 400f * guiScale, 30f * guiScale), "VNyan Socket Settings");
-            GUI.skin.label.fontSize = 20 * guiScale;
+            GUI.skin.label.fontSize = (int)(20 * guiScale);
             y += 40f * guiScale;
             bool VNyanSocketEnabled = GUI.Toggle(new Rect(10f * guiScale, y, 200f * guiScale, 30f * guiScale), TunicRandomizer.Settings.VNyanSettings.Enabled, "Enable VNyan Socket");
             TunicRandomizer.Settings.VNyanSettings.Enabled = VNyanSocketEnabled;
@@ -457,8 +457,8 @@ namespace TunicRandomizer {
             if(TunicRandomizer.Settings.VNyanSettings.Enabled)
             {
                 y += 40f * guiScale;
-                GUI.skin.button.fontSize = 17 * guiScale;
-                GUI.skin.label.fontSize = 20 * guiScale;
+                GUI.skin.button.fontSize = (int)(17f * guiScale);
+                GUI.skin.label.fontSize = (int)(20f * guiScale);
 
                 GUI.Label(new Rect(10f * guiScale, y, 400f * guiScale, 30f * guiScale), $"Address: {textWithCursor(TunicRandomizer.Settings.VNyanSettings.Address, stringCursorPosition, editingVNyanAddress)}");
 
@@ -482,8 +482,8 @@ namespace TunicRandomizer {
                     TunicRandomizer.Settings.VNyanSettings.Address = "";
                     OptionsGUIPatches.SaveSettings();
                 }
-                GUI.skin.button.fontSize = 20 * guiScale;
-                GUI.skin.label.fontSize = 25 * guiScale;
+                GUI.skin.button.fontSize = (int)(20f * guiScale);
+                GUI.skin.label.fontSize = (int)(25f * guiScale);
             }
 
 
