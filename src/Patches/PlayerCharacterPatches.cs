@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using static TunicRandomizer.SaveFlags;
+using Klak.Spout;
 
 namespace TunicRandomizer {
     public class PlayerCharacterPatches {
@@ -28,17 +30,68 @@ namespace TunicRandomizer {
         public static float TimeWhenLastChangedDayNight = 0.0f;
         public static float ResetDayNightTimer = -1.0f;
         public static LadderEnd LastLadder = null;
-
+        public static RenderTexture GameRenderTexture;
+        public static Camera origCam;
+        public static Camera newCamera;
         public static void PlayerCharacter_creature_Awake_PostfixPatch(PlayerCharacter __instance) {
 
             __instance.gameObject.AddComponent<WaveSpell>();
             __instance.gameObject.AddComponent<EntranceSeekerSpell>();
             __instance.gameObject.AddComponent<DDRSpell>();
-            DDRSpell.SetupDPADTester(__instance);
+            __instance.gameObject.AddComponent<SpoutSender>();
+            DDRSpell.SetupDPADTester(__instance);  
+            
         }
 
         public static void PlayerCharacter_Update_PostfixPatch(PlayerCharacter __instance) {
-            Cheats.FastForward = Input.GetKey(KeyCode.Backslash) && !TunicRandomizer.Settings.RaceMode;
+
+            if(origCam == null)
+            {
+                origCam = Camera.main;
+            }
+
+            if (newCamera == null)
+            {
+                TunicLogger.LogInfo("Attaching Camera");
+                GameObject newCam = new GameObject("newCam");
+                newCamera = newCam.AddComponent<Camera>();
+                //newCamera.tag = "MainCamera";
+                newCamera.transform.parent = GameObject.Find("_Fox(Clone)/Fox/root/pelvis/chest/head").transform;
+                newCamera.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+                newCamera.nearClipPlane = 0.15f;
+                newCamera.fieldOfView = 70f;
+                newCamera.transform.localRotation = Quaternion.identity;
+                newCamera.targetTexture = origCam.targetTexture;
+
+                SpoutSender spout = __instance.gameObject.GetComponentInChildren<SpoutSender>();
+                spout.sourceTexture = newCamera.targetTexture;
+                spout.spoutName = "FoxCamSpout";
+
+                GameObject rawImageObject = new GameObject("RenderTextureDisplay");
+
+                // Set the parent of the RawImage to the target Canvas
+                rawImageObject.transform.SetParent(GameObject.Find("_GameGUI(Clone)/AreaLabels").transform);
+                
+
+                // Add a RectTransform component
+                RectTransform rectTransform = rawImageObject.AddComponent<RectTransform>();
+                rectTransform.sizeDelta = new Vector2(640, 480); // Set the size of the rectangle
+
+                // Add a RawImage component
+                RawImage rawImage = rawImageObject.AddComponent<RawImage>();
+
+                // Set the texture of the RawImage to the RenderTexture
+                rawImage.texture = newCamera.targetTexture;
+
+            }
+
+            if (Input.GetKeyDown(KeyCode.LeftBracket))
+            {
+                TunicLogger.LogInfo("thingy pushed");
+                origCam.gameObject.SetActive(!origCam.gameObject.active);
+            }
+
+                Cheats.FastForward = Input.GetKey(KeyCode.Backslash) && !TunicRandomizer.Settings.RaceMode;
 
             if (DiedToDeathLink) {
                 if (DeathLinkMessage != "") {
