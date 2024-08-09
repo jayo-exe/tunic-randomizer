@@ -64,6 +64,133 @@ namespace TunicRandomizer {
         }
 
         private static float guiScale = 1f;
+        private static Dictionary<string, bool> editingFlags = new Dictionary<string, bool>() {
+            {"Player", false},
+            {"Hostname", false},
+            {"Port", false},
+            {"Password", false},
+        };
+
+        //Get a conenction setting value by fieldname
+        private static string getConnectionSetting(string fieldName)
+        {
+            switch(fieldName)
+            {
+                case "Player":
+                    return TunicRandomizer.Settings.ConnectionSettings.Player;
+                case "Hostname":
+                    return TunicRandomizer.Settings.ConnectionSettings.Hostname;
+                case "Port":
+                    return TunicRandomizer.Settings.ConnectionSettings.Port;
+                case "Password":
+                    return TunicRandomizer.Settings.ConnectionSettings.Password;
+                default:
+                    return "";
+            }
+        }
+
+        //Set a conenction setting value by fieldname
+        private static void setConnectionSetting(string fieldName, string value)
+        {
+            switch (fieldName)
+            {
+                case "Player":
+                    TunicRandomizer.Settings.ConnectionSettings.Player = value;
+                    return;
+                case "Hostname":
+                    TunicRandomizer.Settings.ConnectionSettings.Hostname = value;
+                    return;
+                case "Port":
+                    TunicRandomizer.Settings.ConnectionSettings.Port = value;
+                    return;
+                case "Password":
+                    TunicRandomizer.Settings.ConnectionSettings.Password = value;
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        //Place a visible cursor in a text label when editing the field
+        private static string textWithCursor(string text, bool isEditing, bool showText)
+        {
+            string baseText = showText ? text : new string('*', text.Length);
+            if (!isEditing) return baseText;
+            if (stringCursorPosition > baseText.Length) stringCursorPosition = baseText.Length;
+            return baseText.Insert(stringCursorPosition, "<color=#EAA614>|</color>");
+        }
+
+        //Clear all field editing flags (since we do this in a few places)
+        private static void clearAllEditingFlags()
+        {
+
+            List<string> fieldKeys = new List<string>(editingFlags.Keys);
+            foreach (string fieldKey in fieldKeys)
+            {
+                editingFlags[fieldKey] = false;
+            }
+        }
+
+        //Initialize a text field for editing
+        private static void beginEditingTextField(string fieldName)
+        {
+            if (editingFlags[fieldName]) return; //can't begin if we're already editing this field
+
+            //check and finalize if another field was mid-edit
+            List<string> fieldKeys = new List<string>(editingFlags.Keys);
+            foreach (string fieldKey in fieldKeys)
+            {
+                if (editingFlags[fieldKey]) finishEditingTextField(fieldKey);
+            }
+
+            stringToEdit = getConnectionSetting(fieldName);
+            stringCursorPosition = stringToEdit.Length;
+            GUIInput.instance.actionSet.Enabled = false; //prevent keypresses from interacting with the menu while editing
+            editingFlags[fieldName] = true;
+        }
+
+        //finalize editing a text field and save the changes
+        private static void finishEditingTextField(string fieldName)
+        {
+            if (!editingFlags[fieldName]) return; //can't finish if we're not editing this field
+
+            stringToEdit = "";
+            stringCursorPosition = 0;
+            OptionsGUIPatches.SaveSettings();
+            GUIInput.instance.actionSet.Enabled = true;
+            editingFlags[fieldName] = false;
+        }
+
+        private static void handleEditButton(string fieldName)
+        {
+            if (editingFlags[fieldName])
+            {
+                finishEditingTextField(fieldName);
+            }
+            else
+            {
+                beginEditingTextField(fieldName);
+            }
+        }
+
+        private static void handlePasteButton(string fieldName)
+        {
+            
+            setConnectionSetting(fieldName, GUIUtility.systemCopyBuffer);
+            if (editingFlags[fieldName])
+            {
+                stringToEdit = GUIUtility.systemCopyBuffer;
+                finishEditingTextField(fieldName);
+            }
+            OptionsGUIPatches.SaveSettings();
+        }
+
+        private static void handleClearButton(string fieldName)
+        {
+            setConnectionSetting(fieldName, "");
+            if (editingFlags[fieldName]) stringToEdit = "";
+            OptionsGUIPatches.SaveSettings();
+        }
 
         private void OnGUI() {
             if (SceneManager.GetActiveScene().name == "TitleScreen" && GameObject.FindObjectOfType<TitleScreen>() != null) {
@@ -80,10 +207,7 @@ namespace TunicRandomizer {
                     case RandomizerSettings.RandomizerType.SINGLEPLAYER:
                         GUI.Window(101, new Rect(20f, (float)Screen.height * 0.12f, 430f * guiScale, (500f + (TunicRandomizer.Settings.MysterySeed ? 0f : 80f) + (TunicRandomizer.Settings.VNyanSettings.Enabled ? 80f : 0f)) * guiScale), new Action<int>(SinglePlayerQuickSettingsWindow), "Single Player Settings");
                         ShowAPSettingsWindow = false;
-                        editingPlayer = false;
-                        editingHostname = false;
-                        editingPort = false;
-                        editingPassword = false;
+                        clearAllEditingFlags();
                         break;
                     case RandomizerSettings.RandomizerType.ARCHIPELAGO:
                         GUI.Window(101, new Rect(20f, (float)Screen.height * 0.12f, 430f * guiScale, (540f + (TunicRandomizer.Settings.VNyanSettings.Enabled ? 80f * guiScale : 0f)) * guiScale), new Action<int>(ArchipelagoQuickSettingsWindow), "Archipelago Settings");
@@ -118,16 +242,14 @@ namespace TunicRandomizer {
                         stringCursorPosition++;
                     }
                 }
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
-                    if (!editingPlayer && !editingHostname && !editingPort && !editingHostname) {
-                        CloseAPSettingsWindow();
-                    } else {
-                        editingPlayer = false;
-                        editingHostname = false;
-                        editingPort = false;
-                        editingPassword = false;
-                        stringToEdit = "";
-                        OptionsGUIPatches.SaveSettings();
+
+                //handle backspacing
+                if (Input.GetKeyDown(KeyCode.Backspace))
+                {
+                    if (stringToEdit.Length > 0 && stringCursorPosition > 0)
+                    {
+                        stringToEdit = stringToEdit.Remove(stringCursorPosition - 1, 1);
+                        stringCursorPosition--;
                     }
                 }
                 if (Input.GetKeyDown(KeyCode.Backspace)) {
@@ -588,11 +710,8 @@ namespace TunicRandomizer {
             bool EditPlayer = GUI.Button(new Rect(10f * guiScale, 70f * guiScale, 75f * guiScale, 30f * guiScale), editingPlayer ? "Save" : "Edit");
             if (EditPlayer) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Player, ref editingPlayer);
             bool PastePlayer = GUI.Button(new Rect(100f * guiScale, 70f * guiScale, 75f * guiScale, 30f * guiScale), "Paste");
-            if (PastePlayer) {
-                TunicRandomizer.Settings.ConnectionSettings.Player = GUIUtility.systemCopyBuffer;
-                editingPlayer = false;
-                OptionsGUIPatches.SaveSettings();
-            }
+            if (PastePlayer) handlePasteButton("Player");
+            
             bool ClearPlayer = GUI.Button(new Rect(190f * guiScale, 70f * guiScale, 75f * guiScale, 30f * guiScale), "Clear");
             if (ClearPlayer) {
                 if (editingPlayer) { 
@@ -605,9 +724,10 @@ namespace TunicRandomizer {
             GUI.Label(new Rect(10f * guiScale, 120f * guiScale, 300f * guiScale, 30f * guiScale), $"Host: {textWithCursor(TunicRandomizer.Settings.ConnectionSettings.Hostname, stringCursorPosition, editingHostname)}");
             bool setLocalhost = GUI.Toggle(new Rect(160f * guiScale, 160f * guiScale, 90f * guiScale, 30f * guiScale), TunicRandomizer.Settings.ConnectionSettings.Hostname == "localhost", "localhost");
             if (setLocalhost && TunicRandomizer.Settings.ConnectionSettings.Hostname != "localhost") {
-                TunicRandomizer.Settings.ConnectionSettings.Hostname = "localhost";
+                setConnectionSetting("Hostname", "localhost");
                 OptionsGUIPatches.SaveSettings();
             }
+            
             bool setArchipelagoHost = GUI.Toggle(new Rect(10f * guiScale, 160f * guiScale, 140f * guiScale, 30f * guiScale), TunicRandomizer.Settings.ConnectionSettings.Hostname == "archipelago.gg", "archipelago.gg");
             if (setArchipelagoHost && TunicRandomizer.Settings.ConnectionSettings.Hostname != "archipelago.gg") {
                 TunicRandomizer.Settings.ConnectionSettings.Hostname = "archipelago.gg";
@@ -636,17 +756,8 @@ namespace TunicRandomizer {
             if (EditPort) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Port.ToString(), ref editingPort);
 
             bool PastePort = GUI.Button(new Rect(100f * guiScale, 300f * guiScale, 75f * guiScale, 30f * guiScale), "Paste");
-            if (PastePort) {
-                try {
-                    if (int.TryParse(GUIUtility.systemCopyBuffer, out int num)) {
-                        TunicRandomizer.Settings.ConnectionSettings.Port = GUIUtility.systemCopyBuffer;
-                    }
-                    editingPort = false;
-                    OptionsGUIPatches.SaveSettings();
-                } catch (Exception e) {
-                    TunicLogger.LogError("invalid input pasted for port number!");
-                }
-            }
+            if (PastePort) handlePasteButton("Port");
+            
             bool ClearPort = GUI.Button(new Rect(190f * guiScale, 300f * guiScale, 75f * guiScale, 30f * guiScale), "Clear");
             if (ClearPort) {
                 if (editingPort) {
@@ -662,19 +773,12 @@ namespace TunicRandomizer {
             if (EditPassword) handleEditButton(TunicRandomizer.Settings.ConnectionSettings.Password, ref editingPassword);
 
             bool PastePassword = GUI.Button(new Rect(100f * guiScale, 400f * guiScale, 75f * guiScale, 30f * guiScale), "Paste");
-            if (PastePassword) {
-                TunicRandomizer.Settings.ConnectionSettings.Password = GUIUtility.systemCopyBuffer;
-                editingPassword = false;
-                OptionsGUIPatches.SaveSettings();
-            }
+            if (PastePassword) handlePasteButton("Password");
+            
             bool ClearPassword = GUI.Button(new Rect(190f * guiScale, 400f * guiScale, 75f * guiScale, 30f * guiScale), "Clear");
-            if (ClearPassword) {
-                if (editingPassword) {
-                    stringToEdit = "";
-                }
-                TunicRandomizer.Settings.ConnectionSettings.Password = "";
-                OptionsGUIPatches.SaveSettings();
-            }
+            if (ClearPassword) handleClearButton("Password");
+            
+            //Close button
             bool Close = GUI.Button(new Rect(10f * guiScale, 450f * guiScale, 165f * guiScale, 30f * guiScale), "Close");
             if (Close) {
                 CloseAPSettingsWindow();
@@ -687,10 +791,7 @@ namespace TunicRandomizer {
         private static void CloseAPSettingsWindow() {
             ShowAPSettingsWindow = false;
             stringToEdit = "";
-            editingPlayer = false;
-            editingHostname = false;
-            editingPort = false;
-            editingPassword = false;
+            clearAllEditingFlags();
             OptionsGUIPatches.SaveSettings();
         }
 
