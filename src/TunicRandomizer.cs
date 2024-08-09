@@ -39,11 +39,9 @@ namespace TunicRandomizer {
             ClassInjector.RegisterTypeInIl2Cpp<ToggleObjectByFuse>();
             ClassInjector.RegisterTypeInIl2Cpp<BossEnemy>();
             ClassInjector.RegisterTypeInIl2Cpp<FleemerQuartet>();
-            //TunicLogger.LogInfo("Logging Spout Res");
-            //ClassInjector.RegisterTypeInIl2Cpp<SpoutResources>();
-            //TunicLogger.LogInfo("Logging Spout Send");
-            //ClassInjector.RegisterTypeInIl2Cpp<SpoutSender>();
-            //TunicLogger.LogInfo("Logging Spout Done");
+            TunicLogger.LogInfo("Logging Spout Send");
+            ClassInjector.RegisterTypeInIl2Cpp<SpoutSender>();
+            TunicLogger.LogInfo("Logging Spout Done");
 
 
             ClassInjector.RegisterTypeInIl2Cpp<MusicShuffler>();
@@ -74,7 +72,9 @@ namespace TunicRandomizer {
             }) {
                 hideFlags = HideFlags.HideAndDontSave
             });
-            
+
+            UnityEngine.Object.DontDestroyOnLoad(new GameObject("first person cam holder"));
+
 
             if (!Directory.Exists(Application.persistentDataPath + "/Randomizer/")) {
                 Directory.CreateDirectory(Application.persistentDataPath + "/Randomizer/");

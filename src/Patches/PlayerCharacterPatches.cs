@@ -31,64 +31,89 @@ namespace TunicRandomizer {
         public static float ResetDayNightTimer = -1.0f;
         public static LadderEnd LastLadder = null;
         public static RenderTexture GameRenderTexture;
-        public static Camera origCam;
+        public static GameObject newCameraObj;
         public static Camera newCamera;
+        public static GameObject RenderTextureDisplay;
+        public static GameObject rtdBack;
+        public static int newCamCullingMask = 0;
+        public static Texture newCamLut;
+        public static Texture newCamBlend;
+        public static AmplifyColorEffect origAmp;
+        public static Camera origCam;
+
         public static void PlayerCharacter_creature_Awake_PostfixPatch(PlayerCharacter __instance) {
 
             __instance.gameObject.AddComponent<WaveSpell>();
             __instance.gameObject.AddComponent<EntranceSeekerSpell>();
             __instance.gameObject.AddComponent<DDRSpell>();
-            __instance.gameObject.AddComponent<SpoutSender>();
             DDRSpell.SetupDPADTester(__instance);  
             
         }
 
         public static void PlayerCharacter_Update_PostfixPatch(PlayerCharacter __instance) {
 
-            if(origCam == null)
-            {
-                origCam = Camera.main;
-            }
+            origAmp = GameObject.Find("Camera 2  - Post Processing").GetComponent<AmplifyColorEffect>();
+            origCam = GameObject.Find("Camera 2  - Post Processing").GetComponent<Camera>();
 
-            if (newCamera == null)
+            if (newCameraObj != null)
             {
+                //TunicLogger.LogInfo($"Camera Transform: {newCameraObj.transform.position.ToString()}! {newCameraObj.transform.rotation.ToString()};");
+                //TunicLogger.LogInfo($"Camera Texture: {newCameraObj.GetComponent<Camera>().targetTexture.name}! {newCameraObj.GetComponent<Camera>().enabled} {newCameraObj.active} {newCameraObj.GetComponent<Camera>().cullingMask}");
+            } else
+            {
+                TunicLogger.LogInfo($"Camera MISSING!");
+
+                if (newCamera != null)
+                {
+                    TunicLogger.LogInfo($"Clearing component");
+                    UnityEngine.Object.Destroy(newCamera);
+                }
+
+                if (GameObject.Find("_Fox(Clone)/Fox/root/pelvis/chest/head/newCam") != null)
+                {
+                    TunicLogger.LogInfo($"Old camera object still exists, destroying");
+                    UnityEngine.Object.Destroy(GameObject.Find("_Fox(Clone)/Fox/root/pelvis/chest/head/newCam"));
+                }
+
                 TunicLogger.LogInfo("Attaching Camera");
-                GameObject newCam = new GameObject("newCam");
-                newCamera = newCam.AddComponent<Camera>();
+                newCameraObj = new GameObject("newCam");
+                newCamera = newCameraObj.AddComponent<Camera>();
                 //newCamera.tag = "MainCamera";
                 newCamera.transform.parent = GameObject.Find("_Fox(Clone)/Fox/root/pelvis/chest/head").transform;
-                newCamera.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+                newCamera.transform.localPosition = new Vector3(0f, 0.5f, 0.2f);
                 newCamera.nearClipPlane = 0.15f;
                 newCamera.fieldOfView = 70f;
                 newCamera.transform.localRotation = Quaternion.identity;
-                newCamera.targetTexture = origCam.targetTexture;
-
-                SpoutSender spout = __instance.gameObject.GetComponentInChildren<SpoutSender>();
-                spout.sourceTexture = newCamera.targetTexture;
-                spout.spoutName = "FoxCamSpout";
-
-                GameObject rawImageObject = new GameObject("RenderTextureDisplay");
-
-                // Set the parent of the RawImage to the target Canvas
-                rawImageObject.transform.SetParent(GameObject.Find("_GameGUI(Clone)/AreaLabels").transform);
                 
-
-                // Add a RectTransform component
-                RectTransform rectTransform = rawImageObject.AddComponent<RectTransform>();
-                rectTransform.sizeDelta = new Vector2(640, 480); // Set the size of the rectangle
-
-                // Add a RawImage component
-                RawImage rawImage = rawImageObject.AddComponent<RawImage>();
-
-                // Set the texture of the RawImage to the RenderTexture
-                rawImage.texture = newCamera.targetTexture;
-
+                newCamera.allowHDR = true;
+                newCamera.targetTexture = GameRenderTexture;
+                newCamera.cullingMask = newCamCullingMask;
+                Kino.Bloom bloom = newCameraObj.AddComponent<Kino.Bloom>();
+                bloom.antiFlicker = false;
+                bloom._shader = Shader.Find("Hidden/Kino/Bloom");
+                bloom._intensity = 0.47f;
+                bloom._exposure = 0.226f;
+                bloom._radius = 0f;
+                AmplifyColorEffect newAmp = newCameraObj.AddComponent<AmplifyColorEffect>();
+                newAmp.LutTexture = origAmp.LutTexture;
+                newAmp.LutBlendTexture = origAmp.LutBlendTexture;
             }
+
+            AmplifyColorEffect amp = newCameraObj.GetComponent<AmplifyColorEffect>();
+            if(amp.LutTexture.name != origAmp.LutTexture.name)
+            {
+                amp.LutTexture = origAmp.LutTexture;
+            }
+            if (amp.LutBlendTexture.name != origAmp.LutBlendTexture.name)
+            {
+                amp.LutBlendTexture = origAmp.LutBlendTexture;
+            }
+            TunicLogger.LogInfo($"{origAmp.LutTexture.name};; {origAmp.LutBlendTexture.name};; {amp.LutTexture.name};; {amp.LutBlendTexture.name};; ");
 
             if (Input.GetKeyDown(KeyCode.LeftBracket))
             {
                 TunicLogger.LogInfo("thingy pushed");
-                origCam.gameObject.SetActive(!origCam.gameObject.active);
+                rtdBack.SetActive(!rtdBack.active);
             }
 
                 Cheats.FastForward = Input.GetKey(KeyCode.Backslash) && !TunicRandomizer.Settings.RaceMode;
@@ -405,6 +430,55 @@ namespace TunicRandomizer {
             List<MagicSpell> spells = __instance.spells.ToList();
             spells.Reverse();
             __instance.spells = spells.ToArray();
+
+            if (GameRenderTexture == null)
+            {
+                GameRenderTexture = new RenderTexture(Camera.main.targetTexture);
+                GameRenderTexture.name = "GRT";
+            }
+
+            if (newCamCullingMask == 0)
+            {
+                newCamCullingMask = Camera.main.cullingMask;
+            }
+
+            
+
+
+            /*SpoutSender spout = GameObject.Find("_GameGUI(Clone)/AreaLabels").GetComponentInChildren<SpoutSender>();
+            if(spout == null)
+            {
+                spout = GameObject.Find("_GameGUI(Clone)/AreaLabels").AddComponent<SpoutSender>();
+                    
+            }
+            spout.sourceTexture = GameRenderTexture;
+            spout.spoutName = "FoxCamSpout";*/
+
+            //TunicLogger.LogInfo($"Camera Transform: {newCameraObj.transform.position.ToString()}! {newCameraObj.transform.rotation.ToString()};");
+
+
+            TunicLogger.LogInfo("Attaching RTD");
+            rtdBack = new GameObject("RenderTextureDisplayBack");
+            rtdBack.transform.SetParent(GameObject.Find("_GameGUI(Clone)/AreaLabels").transform);
+            RectTransform bgRect = rtdBack.AddComponent<RectTransform>();
+            bgRect.anchorMin = new Vector2(1, 0);
+            bgRect.anchorMax = new Vector2(1, 0);
+            bgRect.pivot = new Vector2(1, 0);
+            bgRect.sizeDelta = new Vector2(400, 225); // Set the size of the rectangle
+            RawImage bg = rtdBack.AddComponent<RawImage>();
+            bg.color = UnityEngine.Color.white;
+
+
+            RenderTextureDisplay = new GameObject("RenderTextureDisplay");
+            RenderTextureDisplay.transform.SetParent(rtdBack.transform);
+            RectTransform rectTransform = RenderTextureDisplay.AddComponent<RectTransform>();
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.sizeDelta = Vector2.zero;
+            RawImage rawImage = RenderTextureDisplay.AddComponent<RawImage>();
+            rawImage.texture = GameRenderTexture;
         }
 
         private static void PlayerCharacter_Start_SinglePlayerSetup() {
@@ -707,6 +781,30 @@ namespace TunicRandomizer {
         public static bool Ladder_ClimbOn_PrefixPatch(Ladder __instance, LadderEnd ladderEnd) {
             LastLadder = ladderEnd;
             return true;
+        }
+
+        public static void PrintGameObjectHierarchy(GameObject obj, string indent = "")
+        {
+            if (obj.scene.name != SceneManager.GetActiveScene().name) return;
+            // Print the name of the current GameObject
+            Debug.Log(indent + "GameObject: " + obj.name);
+
+            // Print all components attached to this GameObject
+            //Component[] components = obj.GetComponents<Component>();
+            //foreach (Component component in components)
+            //{
+            //    Debug.Log(indent + "  Component: " + component.GetType().FullName);
+           // }
+
+            // Recursively print the children GameObjects
+            foreach (Transform child in obj.transform.GetComponentsInChildren<Transform>(true))
+            {
+                if(child.parent == obj.transform && child.gameObject.scene.name == SceneManager.GetActiveScene().name)
+                {
+                    PrintGameObjectHierarchy(child.gameObject, indent + "  ");
+                }
+                
+            }
         }
 
     }
