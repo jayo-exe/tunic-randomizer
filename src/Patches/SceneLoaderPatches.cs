@@ -657,6 +657,7 @@ namespace TunicRandomizer {
             if (InventoryDisplayPatches.HexagonQuest != null) {
                 InventoryDisplayPatches.HexagonQuest.SetActive(false);
             }
+            FoxCamHandler.HideCameraView();
             SceneName = "TitleScreen";
         }
 
