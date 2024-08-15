@@ -31,16 +31,6 @@ namespace TunicRandomizer {
         public static float TimeWhenLastChangedDayNight = 0.0f;
         public static float ResetDayNightTimer = -1.0f;
         public static LadderEnd LastLadder = null;
-        public static RenderTexture GameRenderTexture;
-        public static GameObject newCameraObj;
-        public static Camera newCamera;
-        public static GameObject RenderTextureDisplay;
-        public static GameObject rtdBack;
-        public static int newCamCullingMask = 0;
-        public static Texture newCamLut;
-        public static Texture newCamBlend;
-        public static AmplifyColorEffect origAmp;
-        public static Camera origCam;
 
         public static bool IsOnFire = false;
         public static bool IsInRadiation = false;
