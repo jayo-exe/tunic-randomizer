@@ -672,6 +672,7 @@ namespace TunicRandomizer {
             if (InventoryDisplayPatches.HexagonQuest != null) {
                 InventoryDisplayPatches.HexagonQuest.SetActive(false);
             }
+            FoxCamHandler.HideCameraView();
             SceneName = "TitleScreen";
             PlayerCharacterPatches.lastSwordLevel = 0;
             VNyanSender.SendActionToVNyan("TunicSwordUp", new { level = 0 });

@@ -9,7 +9,6 @@ using UnityEngine;
 using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using JayoVNyan;
-using Klak.Spout;
 
 namespace TunicRandomizer {
 
@@ -44,9 +43,7 @@ namespace TunicRandomizer {
             ClassInjector.RegisterTypeInIl2Cpp<ToggleObjectByFuse>();
             ClassInjector.RegisterTypeInIl2Cpp<BossEnemy>();
             ClassInjector.RegisterTypeInIl2Cpp<FleemerQuartet>();
-            TunicLogger.LogInfo("Logging Spout Send");
-            ClassInjector.RegisterTypeInIl2Cpp<SpoutSender>();
-            TunicLogger.LogInfo("Logging Spout Done");
+
 
 
             ClassInjector.RegisterTypeInIl2Cpp<MusicShuffler>();
